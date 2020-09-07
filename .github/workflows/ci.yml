@@ -1,0 +1,64 @@
+on:
+  push:
+    branches: [ master, dev ]
+  pull_request:
+    branches: [ master, dev ]
+
+name: build
+
+jobs:
+  build:
+
+    runs-on: ubuntu-18.04
+
+    env:
+      R_LIBS_USER: ${{ github.workspace }}/RLibs
+
+    steps:
+
+    - name: Install required packages
+      run: |
+        sudo apt update
+        sudo apt-get install libudunits2-dev libgdal-dev
+
+    - name: Clone matsim-melbourne/network
+      uses: actions/checkout@v2
+      with:
+        repository: matsim-melbourne/network
+        path: demand
+
+    - name: Setup dirs and permissions for installing R packages
+      run: |
+        mkdir -p $R_LIBS_USER
+        sudo chown -R $USER:$USER $GITHUB_WORKSPACE/demand
+        sudo chown -R $USER:$USER $R_LIBS_USER
+
+    - name: Cache R packages
+      uses: actions/cache@v2
+      id: cache-packrat
+      env:
+        cache-name: cache-packrat-lib
+      with:
+        path: |
+          ${{ github.workspace }}/demand/packrat/lib
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-1-${{ hashFiles('**/packrat.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-build-${{ env.cache-name }}-1-
+
+    - name: Install packrat and project dependencies
+      if: steps.cache-packrat.outputs.cache-hit != 'true'
+      working-directory: demand
+      shell: Rscript {0}
+      run: |
+        version
+        install.packages('packrat')
+        library(packrat)
+        packrat::restore()
+
+    - name: Test network generation
+      working-directory: demand
+      shell: Rscript {0}
+      run: |
+        library(packrat)
+        packrat::restore()
+        testthat::test_dir("tests/testthat", stop_on_failure = TRUE)
