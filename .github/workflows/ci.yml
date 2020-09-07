@@ -14,23 +14,50 @@ jobs:
     env:
       R_LIBS_USER: ${{ github.workspace }}/RLibs
 
+    services:
+      # Label used to access the service container
+      postgres:
+        # Docker Hub image
+        image: postgis/postgis:11-2.5
+        # Provide the password for postgres
+        env:
+            POSTGRES_PASSWORD: postgres
+            POSTGRES_DB: network_test
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          # Maps tcp port 5432 on service container to the host
+          - 5432:5432
+
     steps:
 
-    - name: Install required packages
+    - name: Test postgres setup
       run: |
-        sudo apt update
-        sudo apt-get install libudunits2-dev libgdal-dev
+        psql -U postgres -c 'select version();'
+      env:
+        PGHOST: localhost
+        PGPASSWORD: postgres
+        PGPORT: 5432
+
+    # - name: Install required packages
+    #   run: |
+    #     sudo apt update
+    #     sudo apt-get install libudunits2-dev libgdal-dev
 
     - name: Clone matsim-melbourne/network
       uses: actions/checkout@v2
       with:
         repository: matsim-melbourne/network
-        path: demand
+        path: network
 
     - name: Setup dirs and permissions for installing R packages
       run: |
         mkdir -p $R_LIBS_USER
-        sudo chown -R $USER:$USER $GITHUB_WORKSPACE/demand
+        sudo chown -R $USER:$USER $GITHUB_WORKSPACE/network
         sudo chown -R $USER:$USER $R_LIBS_USER
 
     - name: Cache R packages
@@ -40,14 +67,14 @@ jobs:
         cache-name: cache-packrat-lib
       with:
         path: |
-          ${{ github.workspace }}/demand/packrat/lib
+          ${{ github.workspace }}/network/packrat/lib
         key: ${{ runner.os }}-build-${{ env.cache-name }}-1-${{ hashFiles('**/packrat.lock') }}
         restore-keys: |
           ${{ runner.os }}-build-${{ env.cache-name }}-1-
 
     - name: Install packrat and project dependencies
       if: steps.cache-packrat.outputs.cache-hit != 'true'
-      working-directory: demand
+      working-directory: network
       shell: Rscript {0}
       run: |
         version
@@ -56,7 +83,7 @@ jobs:
         packrat::restore()
 
     - name: Test network generation
-      working-directory: demand
+      working-directory: network
       shell: Rscript {0}
       run: |
         library(packrat)
