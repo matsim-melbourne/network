@@ -46,8 +46,7 @@ jobs:
     - name: Install required packages
       run: |
         sudo apt update
-        sudo apt-get install libudunits2-dev gdal-bin
-    #     sudo apt-get install libudunits2-dev libgdal-dev
+        sudo apt-get install libudunits2-dev libgdal-dev gdal-bin
 
     - name: Clone matsim-melbourne/network
       uses: actions/checkout@v2
