@@ -40,6 +40,11 @@ Version: 2.0.2
 Hash: 6fc0b39f0fdbe3a025062807019e1180
 Requires: assertthat, crayon, fansi, glue
 
+Package: cpp11
+Source: CRAN
+Version: 0.2.1
+Hash: 4c4a213a3e32c76e5979b7dde07b2c94
+
 Package: crayon
 Source: CRAN
 Version: 1.3.4
@@ -178,6 +183,13 @@ Version: 3.0.3
 Hash: 0f09f15d866589a54943e022b5498859
 Requires: cli, crayon, ellipsis, fansi, lifecycle, magrittr, pillar,
     pkgconfig, rlang, vctrs
+
+Package: tidyr
+Source: CRAN
+Version: 1.1.2
+Hash: 95185cd8278804e90c5bd9d3200424ee
+Requires: cpp11, dplyr, ellipsis, glue, lifecycle, magrittr, purrr,
+    rlang, tibble, tidyselect, vctrs
 
 Package: tidyselect
 Source: CRAN
