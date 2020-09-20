@@ -14,7 +14,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
     message("--------------------------------------------------------")
     message(paste0("- Cropping to a test area:                        ",crop2TestArea))
    #message(paste0("- Detailed network only in the focus area:        ", focus_area_flag))
-    message(paste0("- Shortest link lenght in network simplification: ", shortLinkLength))
+    message(paste0("- Shortest link length in network simplification: ", shortLinkLength))
     message(paste0("- Adding elevation:                               ", addElevation))
     message(paste0("- Adding PT from GTFS:                            ", addGtfs))
     message(paste0("- Adding PT from IV-ABM:                          ", addIvabmPt))
@@ -59,7 +59,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   source('./functions/makeEdgesDirect.R')
   source('./functions/restructureData.R')
   source('./functions/addElevation2Nodes.R')
-  source('./functions/gtfs2PtNetowrk.R')
+  source('./functions/gtfs2PtNetwork.R')
   source('./functions/etc/IVABMIntegrator.R')
   source('./functions/cleanNetwork.R')
   source('./functions/exportSQlite.R')
@@ -98,6 +98,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   # * Pairs of one-way edges in opposite directions will be merged into a two-way edge.
   # * Two-way edges will be merged regardless of direction.
   # * One-way edges will NOT be merged with two-way edges.
+  # * Non-car edges do NOT count towards the merged lane count (permlanes)
   system.time(edgesCombined <- combineRedundantEdges(intersectionsSimplified[[1]],
                                                      intersectionsSimplified[[2]]))
   

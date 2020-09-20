@@ -43,9 +43,9 @@ processGtfs <- function(n_df,
   validRoutes <- gtfs$routes %>%
     filter(route_id %in% validTrips$route_id) %>%
     mutate(service_type="null",
-           service_type=ifelse(agency_id%in%c(3)   & route_type%in%c(0),  "tram",service_type),
+           service_type=ifelse(agency_id%in%c(3)   & route_type%in%c(0),  "tram" ,service_type),
            service_type=ifelse(agency_id%in%c(1,2) & route_type%in%c(1,2),"train",service_type),
-           service_type=ifelse(agency_id%in%c(4,6) & route_type%in%c(3),  "bus",service_type)) %>%
+           service_type=ifelse(agency_id%in%c(4,6) & route_type%in%c(3),  "bus"  ,service_type)) %>%
     filter(service_type!="null") %>%
     mutate(route_id=as.factor(route_id)) %>%
     mutate(service_type=as.factor(service_type)) %>%
@@ -316,18 +316,18 @@ processGtfs <- function(n_df,
     mutate(freespeed=11.1) %>% 
     mutate(permlanes=1) %>% 
     mutate(capacity=600) %>% 
-    mutate(isOneway=1) %>% 
+    mutate(is_oneway=1) %>% 
     mutate(bikeway=NA) %>% 
-    mutate(isCycle=FALSE) %>% 
-    mutate(isWalk=FALSE) %>% 
-    mutate(isCar=FALSE) %>% 
+    mutate(is_cycle=0) %>% 
+    mutate(is_walk=0) %>% 
+    mutate(is_car=0) %>% 
     mutate(modes="pt") %>%
     mutate(id=paste0(from_id,"_",to_id)) %>% 
     st_drop_geometry() %>% 
-    #dplyr::select(osm_id, id, from_id, to_id, fromX=from_x, fromY=from_y, toX=to_x, toY=to_y, length, highway, freespeed, permlanes, capacity, bikeway, isCycle, isWalk, isCar, modes) %>% 
+    #dplyr::select(osm_id, id, from_id, to_id, fromX=from_x, fromY=from_y, toX=to_x, toY=to_y, length, highway, freespeed, permlanes, capacity, bikeway, is_cycle, is_walk, is_car, modes) %>% 
     dplyr::select(id, from_id, to_id, fromX=from_x, fromY=from_y, toX=to_x, toY=to_y,
-                  length, highway, freespeed, permlanes, capacity, isOneway,
-                  bikeway, isCycle, isWalk, isCar, modes) %>% 
+                  length, highway, freespeed, permlanes, capacity, is_oneway,
+                  bikeway, is_cycle, is_walk, is_car, modes) %>% 
     distinct()
     
   return(ptNetworkMATSim)

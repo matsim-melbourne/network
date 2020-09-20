@@ -15,8 +15,8 @@
 #   View(filter(df,from_id==147405 | to_id==147405))
 # }
 
-# nodes <-networkSimplified[[1]]
-# edges <-networkSimplified[[2]]
+# nodes <-combinedUndirectedAndDirected[[1]]
+# edges <-combinedUndirectedAndDirected[[2]]
 simplifyLines <- function(nodes,edges){
     
   nodesNoGeom <- nodes %>%
@@ -133,10 +133,10 @@ simplifyLines <- function(nodes,edges){
     group_by(cluster_id,from_id,to_id) %>%
     summarise(length=sum(length,na.rm=T),
               freespeed=max(freespeed,na.rm=T),permlanes=max(permlanes,na.rm=T),
-              capacity=max(capacity,na.rm=T),isOneway=max(isOneway,na.rm=T),
+              capacity=max(capacity,na.rm=T),is_oneway=max(is_oneway,na.rm=T),
               bikeway=max(bikeway,na.rm=T),
-              isCycle=max(isCycle,na.rm=T),isWalk=max(isWalk,na.rm=T),
-              isCar=max(isCar,na.rm=T),geom=st_combine(geom)) %>%
+              is_cycle=max(is_cycle,na.rm=T),is_walk=max(is_walk,na.rm=T),
+              is_car=max(is_car,na.rm=T),geom=st_combine(geom)) %>%
     st_sf() %>%
     st_line_merge()
   
@@ -167,7 +167,7 @@ simplifyLines <- function(nodes,edges){
     filter(from_id != to_id)
   
   # taking the clusters without a consistent direction and merging them.
-  # note that isOneway is manually set to zero. 
+  # note that is_oneway is manually set to zero. 
   clusterEdgesUndirected <- clusterEndpointsUndirected %>%
     left_join(dplyr::select(cluster_edges,-from_id,-to_id), by="cluster_id") %>%
     # left_join(cluster_edges, by="cluster_id") %>%
@@ -175,10 +175,10 @@ simplifyLines <- function(nodes,edges){
     group_by(cluster_id,from_id,to_id) %>%
     summarise(length=sum(length,na.rm=T),
               freespeed=max(freespeed,na.rm=T),permlanes=max(permlanes,na.rm=T),
-              capacity=max(capacity,na.rm=T),isOneway=0,
+              capacity=max(capacity,na.rm=T),is_oneway=0,
               bikeway=max(bikeway,na.rm=T),
-              isCycle=max(isCycle,na.rm=T),isWalk=max(isWalk,na.rm=T),
-              isCar=max(isCar,na.rm=T),geom=st_combine(geom)) %>%
+              is_cycle=max(is_cycle,na.rm=T),is_walk=max(is_walk,na.rm=T),
+              is_car=max(is_car,na.rm=T),geom=st_combine(geom)) %>%
     st_sf() %>%
     st_line_merge()
   
@@ -196,5 +196,5 @@ simplifyLines <- function(nodes,edges){
   return(list(nodesIntersectionsGeom,allEdges))
   
 }
-# st_write(allEdges,'data-intermediate/network3.sqlite', layer = 'links', delete_layer = T)
-# st_write(nodesIntersectionsGeom,'data-intermediate/network3.sqlite', layer = 'nodes', delete_layer = T)
+
+

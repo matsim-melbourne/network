@@ -1,4 +1,4 @@
-simplifyIntersections <- function(n_df,l_df, shortLinkLength = 10){
+simplifyIntersections <- function(n_df, l_df, shortLinkLength=10){
   # shortLinkLength = 20
   # l_df=largestComponent[[2]]
   # n_df=largestComponent[[1]]

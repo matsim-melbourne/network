@@ -71,3 +71,16 @@ brew unlink osgeo-postgis
 brew link postgis
 ```
 Then restart your machine.
+
+### iGraph install on macOS
+If running R from a homebrew install, be sure to unlink suite-sparse before installing iGraph
+```
+brew unlink suite-sparse
+```
+
+### sf install on macOS
+The sf library requires the following to run
+```
+brew install gdal
+brew install udunits
+```
