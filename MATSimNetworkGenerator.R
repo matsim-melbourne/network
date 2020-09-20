@@ -73,6 +73,14 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   # Note: writing logical fields to sqlite is a bad idea, so switching to integers
   networkInput <- list(st_read("data/network.sqlite",layer="nodes",quiet=T),
                        st_read("data/network.sqlite",layer="edges",quiet=T))
+
+  cat(paste0("Network input, nodes:\n"))
+  str(networkInput[[1]])
+  # print.data.frame(head(networkInput[[1]]))
+  cat(paste0("\nNetwork input, edges:\n"))
+  str(networkInput[[2]])
+  cat(paste0("\n"))
+  
   # select from https://github.com/JamesChevalier/cities/tree/master/australia/victoria
   if(crop2TestArea)system.time(networkInput <- crop2Poly(networkInput,
                                                          "city-of-melbourne_victoria"))  
@@ -81,12 +89,23 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   defaults_df <- buildDefaultsDF()
   system.time( osmAttributes <- processOsmTags(osm_metadata,defaults_df))
   
+  
   edgesAttributed <- networkInput[[2]] %>%
     inner_join(osmAttributes, by="osm_id") %>%
     dplyr::select(-osm_id,-highway)
   
+  cat(paste0("edgesAttributed:\n"))
+  str(edgesAttributed)
+  cat(paste0("\n"))
+  
   # keep only the largest connected component
   largestComponent <- largestConnectedComponent(networkInput[[1]],edgesAttributed)
+  
+  cat(paste0("largestComponent, nodes:\n"))
+  str(largestComponent[[1]])
+  cat(paste0("\nlargestComponent, edges:\n"))
+  str(largestComponent[[2]])
+  cat(paste0("\n"))
   
   # simplify intersections while preserving attributes and original geometry.
   system.time(intersectionsSimplified <- simplifyIntersections(largestComponent[[1]],
