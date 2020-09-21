@@ -1,5 +1,6 @@
 makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F, 
-                            addGtfs=F, addIvabmPt=F, writeXml=F, writeSqlite=T){
+                            addGtfs=F, addIvabmPt=F, writeXml=F, writeSqlite=T,
+                            networkSqlite="data/network.sqlite"){
 
     # crop2TestArea=F
     # shortLinkLength=20
@@ -71,13 +72,13 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   message("--------------------------------------------------------")
   
   # Note: writing logical fields to sqlite is a bad idea, so switching to integers
-  networkInput <- list(st_read("data/network.sqlite",layer="nodes",quiet=T),
-                       st_read("data/network.sqlite",layer="edges",quiet=T))
+  networkInput <- list(st_read(networkSqlite,layer="nodes",quiet=T),
+                       st_read(networkSqlite,layer="edges",quiet=T))
   # select from https://github.com/JamesChevalier/cities/tree/master/australia/victoria
   if(crop2TestArea)system.time(networkInput <- crop2Poly(networkInput,
                                                          "city-of-melbourne_victoria"))  
   
-  osm_metadata <- st_read("data/network.sqlite",layer="osm_metadata",quiet=T)
+  osm_metadata <- st_read(networkSqlite,layer="osm_metadata",quiet=T)
   defaults_df <- buildDefaultsDF()
   system.time( osmAttributes <- processOsmTags(osm_metadata,defaults_df))
   
