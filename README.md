@@ -1,4 +1,5 @@
 # MATSim network for Melbourne
+`master`![passing?](https://github.com/matsim-melbourne/network/workflows/build/badge.svg?branch=master) `dev`![passing?](https://github.com/matsim-melbourne/network/workflows/build/badge.svg?branch=dev)
 
 This page explains the steps for building a MATSim network for Melbourne, including active transportation related infrastructure and attributes. To do so, you can start from a raw OSM extract (step 1) or from a set of nodes, edges and edge attributes in a format similar to OSM (step 2).    
 
