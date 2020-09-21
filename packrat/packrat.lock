@@ -3,6 +3,11 @@ PackratVersion: 0.5.0
 RVersion: 4.0.2
 Repos: CRAN=https://cran.rstudio.com/
 
+Package: BH
+Source: CRAN
+Version: 1.72.0-3
+Hash: fc53be86f0b712d3de03fef95893d710
+
 Package: DBI
 Source: CRAN
 Version: 1.1.0
@@ -13,6 +18,11 @@ Source: CRAN
 Version: 2.4.1
 Hash: b488861d8c3dfac497e041ec911df9fb
 
+Package: RANN
+Source: CRAN
+Version: 2.6.1
+Hash: ad5075c9373b36b558ba84f5d5fa9e03
+
 Package: Rcpp
 Source: CRAN
 Version: 1.0.5
@@ -22,6 +32,12 @@ Package: XML
 Source: CRAN
 Version: 3.99-0.5
 Hash: 4d72b5b21762d6ddd4fe0f1db77a51f0
+
+Package: askpass
+Source: CRAN
+Version: 1.1
+Hash: 6f6c430e3cd0dd7d48f447700f4d7e7f
+Requires: sys
 
 Package: assertthat
 Source: CRAN
@@ -40,6 +56,11 @@ Version: 2.0.2
 Hash: 6fc0b39f0fdbe3a025062807019e1180
 Requires: assertthat, crayon, fansi, glue
 
+Package: clipr
+Source: CRAN
+Version: 0.7.0
+Hash: 30cdec6c8cc62c80c485e6bdd0c02b05
+
 Package: cpp11
 Source: CRAN
 Version: 0.2.1
@@ -49,6 +70,11 @@ Package: crayon
 Source: CRAN
 Version: 1.3.4
 Hash: ff2840dd9b0d563fc80377a5a45510cd
+
+Package: curl
+Source: CRAN
+Version: 4.3
+Hash: 3916ae5637dbaf5996dbde80ea92a047
 
 Package: data.table
 Source: CRAN
@@ -93,17 +119,46 @@ Source: CRAN
 Version: 1.4.2
 Hash: afa798ba9deec3676e20300b79094749
 
+Package: hablar
+Source: CRAN
+Version: 0.3.0
+Hash: e7067991504fe5e3610c4827698d9a31
+Requires: dplyr, lubridate, purrr
+
+Package: hms
+Source: CRAN
+Version: 0.5.3
+Hash: a0709e1b17b4bc1c27f5235177543e07
+Requires: pkgconfig, rlang, vctrs
+
+Package: httr
+Source: CRAN
+Version: 1.4.2
+Hash: 2ad813eba37ce1f357434789aa8b6132
+Requires: R6, curl, jsonlite, mime, openssl
+
 Package: igraph
 Source: CRAN
 Version: 1.2.5
 Hash: 56cd6b00fa9864975f6678b4d1a46b50
 Requires: magrittr, pkgconfig
 
+Package: jsonlite
+Source: CRAN
+Version: 1.7.1
+Hash: 313e0917dfcfbc98bb87d79da0d85aaa
+
 Package: lifecycle
 Source: CRAN
 Version: 0.2.0
 Hash: df8649860c43571aab68cc73a2a02807
 Requires: glue, rlang
+
+Package: lubridate
+Source: CRAN
+Version: 1.7.9
+Hash: 132a6c810430a06c9d5e1ffaa497db3c
+Requires: Rcpp, generics
 
 Package: lwgeom
 Source: CRAN
@@ -115,6 +170,23 @@ Package: magrittr
 Source: CRAN
 Version: 1.5
 Hash: bdc4d48c3135e8f3b399536ddf160df4
+
+Package: mime
+Source: CRAN
+Version: 0.9
+Hash: f3388735b4ddea072aff3be44f7f4968
+
+Package: nngeo
+Source: CRAN
+Version: 0.3.9
+Hash: bd0e045525166c62d56e3f353bb3b0a4
+Requires: RANN, lwgeom, s2, sf, units
+
+Package: openssl
+Source: CRAN
+Version: 1.4.2
+Hash: 4a0f5345a4c0dc1ee684fea405f879e8
+Requires: askpass
 
 Package: packrat
 Source: CRAN
@@ -144,6 +216,12 @@ Version: 3.3-13
 Hash: 49b9600868d299dca1d91ec5fe05b245
 Requires: Rcpp, sp
 
+Package: readr
+Source: CRAN
+Version: 1.3.1
+Hash: b38fa28b383389095863c05fa54de9b8
+Requires: BH, R6, Rcpp, clipr, crayon, hms, tibble
+
 Package: rgdal
 Source: CRAN
 Version: 1.5-16
@@ -154,6 +232,12 @@ Package: rlang
 Source: CRAN
 Version: 0.4.7
 Hash: 99d4f4d35ed6991498e7f6c5df8c8ca8
+
+Package: s2
+Source: CRAN
+Version: 1.0.2
+Hash: cf13162714769ca8003df83a2a57abd8
+Requires: Rcpp, wk
 
 Package: sf
 Source: CRAN
@@ -177,6 +261,11 @@ Version: 1.4.0
 Hash: 67da32dbb2a7a16f2ef124336358e54a
 Requires: glue, magrittr, stringi
 
+Package: sys
+Source: CRAN
+Version: 3.4
+Hash: 7fb0c9e1209a804b329a7df3cd422008
+
 Package: tibble
 Source: CRAN
 Version: 3.0.3
@@ -197,6 +286,13 @@ Version: 1.1.0
 Hash: 1c7cea9ea925b701a93f378ec7233ee1
 Requires: ellipsis, glue, purrr, rlang, vctrs
 
+Package: tidytransit
+Source: CRAN
+Version: 0.7.1
+Hash: 9ab8cf8a1a34efe3252e074e82296b86
+Requires: assertthat, data.table, digest, dplyr, hms, httr, lubridate,
+    readr, rlang, sf, tibble, tidyr, zip
+
 Package: units
 Source: CRAN
 Version: 0.6-7
@@ -213,3 +309,14 @@ Source: CRAN
 Version: 0.3.4
 Hash: e2fa0690dc48240c8cb505130779f3b6
 Requires: digest, ellipsis, glue, rlang
+
+Package: wk
+Source: CRAN
+Version: 0.3.2
+Hash: 1f268b22967e7c1cf723043769f8dddd
+Requires: Rcpp
+
+Package: zip
+Source: CRAN
+Version: 2.1.1
+Hash: 127ef4d13fcabd6851527e5570b7aa5c
