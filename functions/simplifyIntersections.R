@@ -1,4 +1,4 @@
-simplifyIntersections <- function(n_df,l_df, shortLinkLength = 10){
+simplifyIntersections <- function(n_df, l_df, shortLinkLength=10){
   # shortLinkLength = 20
   # l_df=largestComponent[[2]]
   # n_df=largestComponent[[1]]
@@ -78,7 +78,7 @@ simplifyIntersections <- function(n_df,l_df, shortLinkLength = 10){
       dplyr::select(-cluster_id)
 
   # adding endpoints to the geometries where intersections have been simplified
-  geomExtended <- mapply(addEndpoints,l_df_new$fromX,l_df_new$fromY,l_df_new$toX,l_df_new$toY,l_df_new$geom)
+  geomExtended <- mapply(addEndpoints,l_df_new$fromX,l_df_new$fromY,l_df_new$toX,l_df_new$toY,st_geometry(l_df_new))
   
   l_df_altered <- l_df_new %>%
     st_drop_geometry() %>%
