@@ -96,11 +96,11 @@ jobs:
         PGPASSWORD: postgres
         PGPORT: 5432
 
-    # - name: Test MATSim network generation
-    #   working-directory: network
-    #   shell: Rscript {0}
-    #   run: |
-    #     library(packrat)
-    #     packrat::on()
-    #     source("MATSimNetworkGenerator.R")
-    #     makeMatsimNetwork(F,20,F,F,F,F,T)
+    - name: Test MATSim network generation
+      working-directory: network
+      shell: Rscript {0}
+      run: |
+        library(packrat)
+        packrat::on()
+        source("MATSimNetworkGenerator.R")
+        makeMatsimNetwork(F,20,F,F,F,F,T)

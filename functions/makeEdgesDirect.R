@@ -14,8 +14,6 @@ makeEdgesDirect <- function(nodes_current,edges_current){
     rename(fromX=X,fromY=Y) %>%
     left_join(nodes_current,by=c("to_id"="id")) %>%
     rename(toX=X,toY=Y) %>%
-    dplyr::select(from_id,to_id,fromX,fromY,toX,toY,length,freespeed,permlanes,
-                  capacity,isOneway,bikeway,isCycle,isWalk,isCar) %>%
     mutate(geom=paste0("LINESTRING(",fromX," ",fromY,",",toX," ",toY,")")) %>%
     st_as_sf(wkt = "geom", crs = 28355)
   

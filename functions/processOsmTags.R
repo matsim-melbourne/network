@@ -15,7 +15,7 @@ processOsmTags <- function(osm_df,this_defaults_df){
   
   osmWithDefaults <- osmWithDefaults %>%
     mutate(bikeway=ifelse(highway=="cycleway",4,0)) %>%
-    dplyr::select(osm_id,highway,freespeed,permlanes,capacity,isOneway,bikeway,isCycle,isWalk,isCar)
+    dplyr::select(osm_id,highway,freespeed,permlanes,capacity,is_oneway,bikeway,is_cycle,is_walk,is_car)
 
   getMetadataInfo <- function(i) {
     df <- osmWithDefaults[i,]
@@ -52,16 +52,16 @@ processOsmTags <- function(osm_df,this_defaults_df){
         }
       }
       
-      if(any(oneway_tags=="yes")) df$isOneway[1]=1
+      if(any(oneway_tags=="yes")) df$is_oneway[1]=1
       #if(any(bicycle_tags %in% c("yes","designated"))) df$bikeway[1]="unmarked"
       if(any(cycleway_tags=="shared_lane")) df$bikeway[1]=1
       if(any(cycleway_tags=="lane") & df$highway[1]!="cycleway") df$bikeway[1]=2
       if(any(cycleway_tags=="track")& df$highway[1]!="cycleway") df$bikeway[1]=3
-      if(any(car_tags=="no")) df$isCar[1]=0
-      if(any(foot_tags=="no")) df$isWalk[1]=0
-      if(any(foot_tags %in% c("yes","designated"))) df$isWalk[1]=1
-      if(df$bikeway[1]>0 | any(bicycle_tags %in% c("yes","designated"))) df$isCycle[1]=1
-      if(any(bicycle_tags %in% "no")) df$isCycle[1]=0
+      if(any(car_tags=="no")) df$is_car[1]=0
+      if(any(foot_tags=="no")) df$is_walk[1]=0
+      if(any(foot_tags %in% c("yes","designated"))) df$is_walk[1]=1
+      if(df$bikeway[1]>0 | any(bicycle_tags %in% c("yes","designated"))) df$is_cycle[1]=1
+      if(any(bicycle_tags %in% "no")) df$is_cycle[1]=0
     }
     return(df)
   }
@@ -69,7 +69,7 @@ processOsmTags <- function(osm_df,this_defaults_df){
   osmAttributed <- lapply(1:nrow(osmWithDefaults),getMetadataInfo) %>%
     bind_rows() %>%
     # looks like the ones with no modes are mostly closed walking or cycling tracks
-    filter(isCycle+isWalk+isCar>0)
+    filter(is_cycle+is_walk+is_car>0)
     
   # this code probably isn't needed anymore as it's been implemented in the getMetadataInfo function
     # osmAttributedCleaned  <- osmAttributedWithModes %>%

@@ -98,11 +98,11 @@ exportXML <- function(network4xml, outputFileName = "outputXML"){
   
   # Adding a reverse links for bi-directionals
   bi_links <- l_df %>% 
-    filter(isOneway==0) %>% 
+    filter(is_oneway==0) %>% 
     rename(from_id=to_id, to_id=from_id, toX=fromX, toY=fromY, fromX=toX, fromY=toY) %>% 
     #mutate(id=paste0("p_",from_id,"_",to_id,"_",row_number())) %>% 
     dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, permlanes,
-                  capacity, isOneway, bikeway, isCycle, isWalk, isCar, modes)
+                  capacity, is_oneway, bikeway, is_cycle, is_walk, is_car, modes)
   
   l_df <- rbind(l_df, bi_links) %>% 
     mutate(tempId = paste0(from_id,"_",to_id,bikeway,modes)) %>% 

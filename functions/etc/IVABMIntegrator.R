@@ -220,10 +220,10 @@ integrateIVABM <- function(net1.nodes.df=NULL, net1.links.df=NULL){
     rename(fromX=x,fromY=y) %>% 
     left_join(net2.nodes.final,by =c("to_id"="id")) %>% 
     rename(toX=x,toY=y) %>% 
-    mutate(isOneway=1) %>% 
-    mutate(isCar=ifelse(stringr::str_detect(modes,"car"), yes = 1, no = 0)) %>% 
-    mutate(isCycle=ifelse(stringr::str_detect(modes,"bicycle"), yes = 1, no = 0)) %>% 
-    mutate(isWalk=ifelse(stringr::str_detect(modes,"walk"), yes = 1, no = 0)) %>% 
+    mutate(is_oneway=1) %>% 
+    mutate(is_car=ifelse(stringr::str_detect(modes,"car"), yes = 1, no = 0)) %>% 
+    mutate(is_cycle=ifelse(stringr::str_detect(modes,"bicycle"), yes = 1, no = 0)) %>% 
+    mutate(is_walk=ifelse(stringr::str_detect(modes,"walk"), yes = 1, no = 0)) %>% 
     fncols(colnames(net1.links.final)) %>% 
     dplyr::select(colnames(net1.links.final)) 
     

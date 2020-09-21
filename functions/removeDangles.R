@@ -6,14 +6,12 @@ removeDangles <- function(nodes,edges,edgeLength){
   numberOfEdges=-1
   edgesNoDangles <- edges %>%
     st_drop_geometry() %>%
-    rowwise() %>%
-    mutate(from=min(from_id,to_id),
-           to=max(from_id,to_id)) %>%
+    mutate(from=ifelse(from_id<to_id,from_id,to_id)) %>%
+    mutate(to=ifelse(to_id>from_id,to_id,from_id)) %>%
     dplyr::select(from,to,length) %>%
     # a to b and b to a might have different lengths
     group_by(from,to) %>%
-    summarise(length=max(length)) %>%
-    as.data.table()
+    summarise(length=max(length))
   
   while(numberOfEdges!=nrow(edgesNoDangles)) {
     numberOfEdges <- nrow(edgesNoDangles)
