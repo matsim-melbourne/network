@@ -1,6 +1,6 @@
 # nodes_current<-intersectionsSimplified[[1]]
 # edges_current<-intersectionsSimplified[[2]]
-a
+
 combineRedundantEdges <- function(nodes_current,edges_current){
   
   # assuming a dataframe with a 'current_group' column, merge edges together
