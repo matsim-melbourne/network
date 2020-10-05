@@ -9,6 +9,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
     # addIvabmPt=F
     # writeXml=F
     # writeSqlite=T
+    # networkSqlite="data/network.sqlite"
     
     message("========================================================")
     message("                **Network Generation Setting**")
