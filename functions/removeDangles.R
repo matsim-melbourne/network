@@ -1,7 +1,7 @@
 
 removeDangles <- function(nodes,edges,edgeLength){
-  # nodes=linesSimplified[[1]]
-  # edges=linesSimplified[[2]]
+  # nodes=edgesSimplified[[1]]
+  # edges=edgesSimplified[[2]]
   # edgeLength=500
   numberOfEdges=-1
   edgesNoDangles <- edges %>%
@@ -11,7 +11,8 @@ removeDangles <- function(nodes,edges,edgeLength){
     dplyr::select(from,to,length) %>%
     # a to b and b to a might have different lengths
     group_by(from,to) %>%
-    summarise(length=max(length))
+    summarise(length=max(length)) %>%
+    ungroup()
   
   while(numberOfEdges!=nrow(edgesNoDangles)) {
     numberOfEdges <- nrow(edgesNoDangles)

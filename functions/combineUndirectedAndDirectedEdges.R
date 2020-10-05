@@ -56,7 +56,7 @@ combineUndirectedAndDirectedEdges <- function(nodes_current,edges_current){
     mutate(permlanes=ifelse(permlanes==0,1,permlanes)) %>%
     # Only road edges can be one way
     mutate(is_oneway=ifelse(is_car==0,0,is_oneway)) %>%
-    dplyr::select(-current_group)
+    dplyr::select(-current_group,-from_id_directed,-to_id_directed)
   
   # geometry of shortest edges
   edges_geom <- edges_current %>%
