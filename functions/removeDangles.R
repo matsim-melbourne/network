@@ -34,3 +34,5 @@ removeDangles <- function(nodes,edges,edgeLength){
   return(list(nodesNoDangles,edgesNoDanglesDF))
 
 }
+
+

@@ -137,17 +137,20 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   # Remove dangles
   system.time(noDangles <- removeDangles(edgesSimplified[[1]],edgesSimplified[[2]],500))
   
-  # Do a second round of simplification. I don't think this is working properly this round.
+  # Do a second round of simplification.
   system.time(edgesCombined2 <- combineRedundantEdges(noDangles[[1]],
                                                       noDangles[[2]]))
   system.time(combinedUndirectedAndDirected2 <- 
                 combineUndirectedAndDirectedEdges(edgesCombined2[[1]],
                                                   edgesCombined2[[2]]))
-  
+  system.time(edgesSimplified2 <- simplifyLines(combinedUndirectedAndDirected2[[1]],
+                                                combinedUndirectedAndDirected2[[2]]))
+  system.time(edgesCombined3 <- combineRedundantEdges(edgesSimplified2[[1]],
+                                                      edgesSimplified2[[2]]))
   # simplify geometry so all edges are straight lines
   system.time(networkDirect <- 
-                makeEdgesDirect(combinedUndirectedAndDirected2[[1]],
-                                combinedUndirectedAndDirected2[[2]]))
+                makeEdgesDirect(edgesCombined3[[1]],
+                                edgesCombined3[[2]]))
   
   # add mode to edges, add type to nodes, change bikeway from numbers to text
   networkRestructured <- restructureData(networkDirect)

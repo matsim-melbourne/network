@@ -1,6 +1,6 @@
 # nodes_current<-intersectionsSimplified[[1]]
 # edges_current<-intersectionsSimplified[[2]]
-
+a
 combineRedundantEdges <- function(nodes_current,edges_current){
   
   # assuming a dataframe with a 'current_group' column, merge edges together
@@ -20,7 +20,7 @@ combineRedundantEdges <- function(nodes_current,edges_current){
       inner_join(edges_shortest_geom, by="current_group") %>%
       group_by(current_group) %>%
       summarise(uid=min(uid,na.rm=T),length=min(length,na.rm=T),
-                from_id=min(from_id,na.rm=T),to_id=min(to_id,na.rm=T),
+                from_id=min(from_id,na.rm=T),to_id=max(to_id,na.rm=T),
                 freespeed=max(freespeed,na.rm=T),permlanes=sum(permlanes,na.rm=T),
                 capacity=sum(capacity,na.rm=T),is_oneway=max(is_oneway,na.rm=T),
                 bikeway=max(bikeway,na.rm=T),
@@ -52,7 +52,6 @@ combineRedundantEdges <- function(nodes_current,edges_current){
   edges_directed_merged <- groupingFunction(edges_directed) %>%
     dplyr::select(-group_count)
   
-  tmp <- edges_directed_merged%>%filter(from_id==388543 | to_id==388543)
   
   # Grouping pairs of one-way edges going in opposite directions. These will
   # be merged into two-way edges

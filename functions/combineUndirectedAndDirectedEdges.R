@@ -41,7 +41,7 @@ combineUndirectedAndDirectedEdges <- function(nodes_current,edges_current){
     inner_join(edges_grouped_shortest_geom, by="current_group") %>%
     group_by(current_group) %>%
     summarise(uid=min(uid,na.rm=T),length=min(length,na.rm=T),
-              from_id=min(min_from_id,na.rm=T),to_id=min(min_to_id,na.rm=T),
+              from_id=min(min_from_id,na.rm=T),to_id=max(min_to_id,na.rm=T),
               freespeed=max(freespeed,na.rm=T),permlanes=sum(permlanes,na.rm=T),
               capacity=sum(capacity,na.rm=T),is_oneway=min(undirected_road,na.rm=T),
               bikeway=max(bikeway,na.rm=T),
