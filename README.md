@@ -36,9 +36,22 @@ cd data && ./prepare.sh -melb -net
 ```
 
 ### Step 2: Generating MATSim network
-This step does a series of processes to generate a MATSim readable network which includes the desired details and options.
-You can simply run `makeNetwork.sh` **with its predefined flags**
-to generate this network you want. A list of options for `makeNetwork.sh` and a brief description for each is presented in this table:
+
+Make sure to have the `newtork.sqlite` and `melbourne.sqlite` files from the previous step, in the data folder before starting this step.
+
+MATSim network generation code is written in R programming language and a working knowledge of R is expected. 
+All required R packages must be installed before running the algorithm. `packrat` will take of that for you and you just need to run the following in R to install the packages:
+```
+install.packages("packrat")
+packrat::restore()
+```
+Ensure that your setup is working by running:
+```
+testthat::test_dir("tests/testthat")
+```
+If all tests pass, you are all set to run the main algorithm.
+
+MATSim network generation algorithm is a designed to be configurable depending on what features are desired. To tell the alogrithm what features needs to be included, you need to run `makeNetwork.sh` **with its predefined flags**:
 
 | Argument | Description                                                                       |
 |----------|-----------------------------------------------------------------------------------|
@@ -50,13 +63,11 @@ to generate this network you want. A list of options for `makeNetwork.sh` and a 
 | -xml     | Writing the output network in MATSim readable XML format                          |
 | -sqlite  | Writing the output network in SQLite format                                       |
 
-**Note** Make sure to **at least specify one output format** for the `makeNetwork.sh`. For example, run the following to generate a MATSim readable XML output network, without public transportation, simplification, elevation, focus area and test area:
+**Note** Make sure to **at least specify one output format** for the `makeNetwork.sh`. For example, the minimum command for creating a MATSim readable output would be:
 
 ```
 ./makeNetwork.sh -xml
 ```
-
-For further adjustments, such as changing the boundary areas for test area and focus area, edit `./MATSimNetworkGenerator.R`
 
 ## Troubleshooting
 ### Postgres install on macOS 10.15+
