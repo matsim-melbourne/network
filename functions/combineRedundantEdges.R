@@ -24,6 +24,7 @@ combineRedundantEdges <- function(nodes_current,edges_current){
                 freespeed=max(freespeed,na.rm=T),permlanes=sum(permlanes,na.rm=T),
                 capacity=sum(capacity,na.rm=T),is_oneway=max(is_oneway,na.rm=T),
                 cycleway=max(cycleway,na.rm=T),
+                highway=max(highway,na.rm=T),
                 is_cycle=max(is_cycle,na.rm=T),is_walk=max(is_walk,na.rm=T),
                 is_car=max(is_car,na.rm=T),group_count=max(group_count,na.rm=T)) %>%
       dplyr::select(-current_group) %>%
@@ -80,7 +81,7 @@ combineRedundantEdges <- function(nodes_current,edges_current){
       st_drop_geometry() %>%
       filter(is_oneway==0) %>%
       dplyr::select(uid,length,from_id,to_id,freespeed,permlanes,capacity,
-                    is_oneway,cycleway,is_cycle,is_walk,is_car)
+                    is_oneway,cycleway,highway,is_cycle,is_walk,is_car)
   )
   
   # Grouping undirected edges even if going in opposite directions.

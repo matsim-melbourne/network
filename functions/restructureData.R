@@ -23,7 +23,7 @@ restructureData <- function(networkAttributed){
   # shared_lane        = 1
   # no_lane/no_cycling = 0
 
-    links <- links %>%  # For the next steps it is probably faster and easier if links are not spatial objects - AJ 14 July 2020
+    links <- links %>%  
       st_drop_geometry() %>%
       # sf::st_coordinates() %>%
       # as.data.frame() %>%
@@ -43,7 +43,7 @@ restructureData <- function(networkAttributed){
       mutate(cycleway=ifelse(cycleway==1, "shared_lane"   , cycleway)) %>%
       mutate(cycleway=ifelse(cycleway==0, NA              , cycleway)) %>%
       dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
-                    permlanes, capacity, is_oneway, cycleway, is_cycle, is_walk,
+                    permlanes, capacity, highway, is_oneway, cycleway, is_cycle, is_walk,
                     is_car, modes)
     
   return(list(nodes,links))

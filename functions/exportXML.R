@@ -102,7 +102,7 @@ exportXML <- function(network4xml, outputFileName = "outputXML"){
     rename(from_id=to_id, to_id=from_id, toX=fromX, toY=fromY, fromX=toX, fromY=toY) %>% 
     #mutate(id=paste0("p_",from_id,"_",to_id,"_",row_number())) %>% 
     dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, permlanes,
-                  capacity, is_oneway, cycleway, is_cycle, is_walk, is_car, modes)
+                  capacity, is_oneway, cycleway, highway, is_cycle, is_walk, is_car, modes)
   
   l_df <- rbind(l_df, bi_links) %>% 
     mutate(tempId = paste0(from_id,"_",to_id,cycleway,modes)) %>% 

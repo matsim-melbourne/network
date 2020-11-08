@@ -91,10 +91,9 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   defaults_df <- buildDefaultsDF()
   system.time( osmAttributes <- processOsmTags(osm_metadata,defaults_df))
   
-  
   edgesAttributed <- networkInput[[2]] %>%
     inner_join(osmAttributes, by="osm_id") %>%
-    dplyr::select(-osm_id,-highway)
+    dplyr::select(-osm_id,highway)
   
   cat(paste0("edgesAttributed:\n"))
   str(edgesAttributed)
