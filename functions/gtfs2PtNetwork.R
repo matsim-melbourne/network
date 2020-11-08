@@ -317,17 +317,17 @@ processGtfs <- function(n_df,
     mutate(permlanes=1) %>% 
     mutate(capacity=600) %>% 
     mutate(is_oneway=1) %>% 
-    mutate(bikeway=NA) %>% 
+    mutate(cycleway=NA) %>% 
     mutate(is_cycle=0) %>% 
     mutate(is_walk=0) %>% 
     mutate(is_car=0) %>% 
     mutate(modes="pt") %>%
     mutate(id=paste0(from_id,"_",to_id)) %>% 
     st_drop_geometry() %>% 
-    #dplyr::select(osm_id, id, from_id, to_id, fromX=from_x, fromY=from_y, toX=to_x, toY=to_y, length, highway, freespeed, permlanes, capacity, bikeway, is_cycle, is_walk, is_car, modes) %>% 
+    #dplyr::select(osm_id, id, from_id, to_id, fromX=from_x, fromY=from_y, toX=to_x, toY=to_y, length, highway, freespeed, permlanes, capacity, cycleway, is_cycle, is_walk, is_car, modes) %>% 
     dplyr::select(id, from_id, to_id, fromX=from_x, fromY=from_y, toX=to_x, toY=to_y,
                   length, highway, freespeed, permlanes, capacity, is_oneway,
-                  bikeway, is_cycle, is_walk, is_car, modes) %>% 
+                  cycleway, is_cycle, is_walk, is_car, modes) %>% 
     distinct()
     
   return(ptNetworkMATSim)

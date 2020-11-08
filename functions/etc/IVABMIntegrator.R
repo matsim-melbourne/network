@@ -38,7 +38,7 @@ integrateIVABM <- function(net1.nodes.df=NULL, net1.links.df=NULL){
       dplyr::select(id = V16, from_id = V17, to_id = V18, length = V19, freespeed = V20, 
                     capacity = V21, permlanes = V22, oneway = V23, modes = V24, 
                     bicycleInfrastructureSpeedFactor = V7, osm_id = V10, type = V13, 
-                    bikeway = V8, GEOMETRY = V1) 
+                    cycleway = V8, GEOMETRY = V1) 
     
     net1.nodes.df <- xmlToList(net.nodes.xml[[1]]) %>% 
       unlist() %>% 

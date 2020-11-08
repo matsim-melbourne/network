@@ -14,8 +14,8 @@ processOsmTags <- function(osm_df,this_defaults_df){
   tagList <- strsplit(gsub('=>',',', gsub('"', '', osmWithDefaults$other_tags)),',')
   
   osmWithDefaults <- osmWithDefaults %>%
-    mutate(bikeway=ifelse(highway=="cycleway",4,0)) %>%
-    dplyr::select(osm_id,highway,freespeed,permlanes,capacity,is_oneway,bikeway,is_cycle,is_walk,is_car)
+    mutate(cycleway=ifelse(highway=="cycleway",4,0)) %>%
+    dplyr::select(osm_id,highway,freespeed,permlanes,capacity,is_oneway,cycleway,is_cycle,is_walk,is_car)
 
   getMetadataInfo <- function(i) {
     df <- osmWithDefaults[i,]
@@ -53,14 +53,14 @@ processOsmTags <- function(osm_df,this_defaults_df){
       }
       
       if(any(oneway_tags=="yes")) df$is_oneway[1]=1
-      #if(any(bicycle_tags %in% c("yes","designated"))) df$bikeway[1]="unmarked"
-      if(any(cycleway_tags=="shared_lane")) df$bikeway[1]=1
-      if(any(cycleway_tags=="lane") & df$highway[1]!="cycleway") df$bikeway[1]=2
-      if(any(cycleway_tags=="track")& df$highway[1]!="cycleway") df$bikeway[1]=3
+      #if(any(bicycle_tags %in% c("yes","designated"))) df$cycleway[1]="unmarked"
+      if(any(cycleway_tags=="shared_lane")) df$cycleway[1]=1
+      if(any(cycleway_tags=="lane") & df$highway[1]!="cycleway") df$cycleway[1]=2
+      if(any(cycleway_tags=="track")& df$highway[1]!="cycleway") df$cycleway[1]=3
       if(any(car_tags=="no")) df$is_car[1]=0
       if(any(foot_tags=="no")) df$is_walk[1]=0
       if(any(foot_tags %in% c("yes","designated"))) df$is_walk[1]=1
-      if(df$bikeway[1]>0 | any(bicycle_tags %in% c("yes","designated"))) df$is_cycle[1]=1
+      if(df$cycleway[1]>0 | any(bicycle_tags %in% c("yes","designated"))) df$is_cycle[1]=1
       if(any(bicycle_tags %in% "no")) df$is_cycle[1]=0
     }
     return(df)

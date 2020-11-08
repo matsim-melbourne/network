@@ -53,7 +53,7 @@ exportXML <- function(network4xml, outputFileName = "outputXML"){
                                         oneway="1", 
                                         modes=as.character(this_link$modes)))
     attribs <- this_link  %>% 
-      dplyr::select(osm_id, type, bikeway, bicycleInfrastructureSpeedFactor)
+      dplyr::select(osm_id, type, cycleway, bicycleInfrastructureSpeedFactor)
     xlattribs <- lapply(
       seq_along(attribs),
       function(i,x,n) { 
@@ -102,20 +102,20 @@ exportXML <- function(network4xml, outputFileName = "outputXML"){
     rename(from_id=to_id, to_id=from_id, toX=fromX, toY=fromY, fromX=toX, fromY=toY) %>% 
     #mutate(id=paste0("p_",from_id,"_",to_id,"_",row_number())) %>% 
     dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, permlanes,
-                  capacity, is_oneway, bikeway, is_cycle, is_walk, is_car, modes)
+                  capacity, is_oneway, cycleway, is_cycle, is_walk, is_car, modes)
   
   l_df <- rbind(l_df, bi_links) %>% 
-    mutate(tempId = paste0(from_id,"_",to_id,bikeway,modes)) %>% 
+    mutate(tempId = paste0(from_id,"_",to_id,cycleway,modes)) %>% 
     distinct(tempId, .keep_all = T ) %>% 
     dplyr::select(-tempId)
   
   # Adding bicycle and extra information
-  l_df <-  fncols(l_df, c("id","osm_id", "highway", "bikeway", "bicycleInfrastructureSpeedFactor")) 
+  l_df <-  fncols(l_df, c("id","osm_id", "highway", "cycleway", "bicycleInfrastructureSpeedFactor")) 
   l_df <- l_df %>%
     mutate(id = replace(id, is.na(id), row_number())) %>% 
     mutate(osm_id = replace(osm_id, is.na(osm_id), 9999999999)) %>% 
     mutate(type = replace(highway, is.na(highway), "NotSpecified")) %>% 
-    mutate(bikeway = replace(bikeway, is.na(bikeway),"No")) %>% 
+    mutate(cycleway = replace(cycleway, is.na(cycleway),"No")) %>% 
     mutate(bicycleInfrastructureSpeedFactor = replace(bicycleInfrastructureSpeedFactor, 
                                                       is.na(bicycleInfrastructureSpeedFactor),1.0))
   

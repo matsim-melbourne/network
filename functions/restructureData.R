@@ -36,14 +36,14 @@ restructureData <- function(networkAttributed){
       mutate(modes=ifelse( is.na(modes)&is_cycle==1,                      "bicycle", modes)) %>%
       mutate(modes=ifelse( !is.na(modes)&is_walk==1,    paste(modes,"walk",sep=","), modes)) %>%
       mutate(modes=ifelse(  is.na(modes)&is_walk==1,                         "walk", modes)) %>%
-      # convert bikeway from numbers to text
-      mutate(bikeway=ifelse(bikeway==4, "bikepath"      , bikeway)) %>%
-      mutate(bikeway=ifelse(bikeway==3, "seperated_lane", bikeway)) %>%
-      mutate(bikeway=ifelse(bikeway==2, "lane"          , bikeway)) %>%
-      mutate(bikeway=ifelse(bikeway==1, "shared_lane"   , bikeway)) %>%
-      mutate(bikeway=ifelse(bikeway==0, NA              , bikeway)) %>%
+      # convert cycleway from numbers to text
+      mutate(cycleway=ifelse(cycleway==4, "bikepath"      , cycleway)) %>%
+      mutate(cycleway=ifelse(cycleway==3, "seperated_lane", cycleway)) %>%
+      mutate(cycleway=ifelse(cycleway==2, "lane"          , cycleway)) %>%
+      mutate(cycleway=ifelse(cycleway==1, "shared_lane"   , cycleway)) %>%
+      mutate(cycleway=ifelse(cycleway==0, NA              , cycleway)) %>%
       dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
-                    permlanes, capacity, is_oneway, bikeway, is_cycle, is_walk,
+                    permlanes, capacity, is_oneway, cycleway, is_cycle, is_walk,
                     is_car, modes)
     
   return(list(nodes,links))
