@@ -41,9 +41,15 @@ combineRedundantEdges <- function(nodes_current,edges_current){
     # Only road edges can be one way
     mutate(is_oneway=ifelse(is_car==0,0,is_oneway))
   
-  
+  # separating bike paths from the rest
+  edges_bikeway <- edges_current %>%
+    st_drop_geometry() %>%
+    filter(highway=="cycleway")
+  edges_current_new <- edges_current %>%
+    filter(highway!="cycleway")
+    
   # one-way edges
-  edges_directed <- edges_current %>%
+  edges_directed <- edges_current_new %>%
     filter(is_oneway==1) %>%
     st_drop_geometry() %>%
     group_by(from_id,to_id) %>%
@@ -106,6 +112,7 @@ combineRedundantEdges <- function(nodes_current,edges_current){
   # lanes to one.
   edges_all <- bind_rows(
     edges_undirected_merged,
+    edges_bikeway,
     edges_directed_opposite_merged%>%filter(is_oneway==1)
   ) %>%
     mutate(permlanes=ifelse(permlanes==0,1,permlanes))

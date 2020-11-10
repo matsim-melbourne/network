@@ -7,11 +7,15 @@ combineUndirectedAndDirectedEdges <- function(nodes_current,edges_current){
     mutate(uid=row_number()) %>%
     # Only road edges should count towards the number of lanes
     mutate(permlanes=ifelse(is_car==0,0,permlanes))
-  
+  edges_bikeway <- edges_current %>% 
+    filter(highway=="cycleway")
+  edges_current2 <- edges_current %>% 
+    filter(highway!="cycleway")
   # Group edges with the same from and to ids, even if going in opposite
   # directions or a mixture of one-way and two-way edges
-  edges_grouped <- edges_current %>%
+  edges_grouped <- edges_current2 %>%
     st_drop_geometry() %>%
+    #filter(cycleway!="bikepath") %>% 
     mutate(min_from_id=ifelse(from_id<to_id,from_id,to_id)) %>%
     mutate(min_to_id=ifelse(to_id>from_id,to_id,from_id)) %>%
     # need to preserve from id, to id order for directed roads
@@ -60,7 +64,7 @@ combineUndirectedAndDirectedEdges <- function(nodes_current,edges_current){
     dplyr::select(-current_group,-from_id_directed,-to_id_directed)
   
   # geometry of shortest edges
-  edges_geom <- edges_current %>%
+  edges_geom <- edges_current2 %>%
     dplyr::select(uid) %>%
     filter(uid %in% edges_grouped2$uid)
   
@@ -70,6 +74,11 @@ combineUndirectedAndDirectedEdges <- function(nodes_current,edges_current){
     dplyr::select(-uid) %>%
     st_sf() %>%
     st_set_crs(28355)
+
+  # adding bike paths back
+  edges_all_geom2 <- edges_all_geom %>% 
+    rbind(dplyr::select(edges_bikeway,-uid))
+
   return(list(nodes_current,edges_all_geom))
 }
 
