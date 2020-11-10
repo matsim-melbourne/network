@@ -45,7 +45,7 @@ for file in ${FILES[*]}; do
   fi
 done
 
-if [ "$isTest"=true ] ; then
+if $isTest; then
   echo 'dowloading the test area'
   from="https://cloudstor.aarnet.edu.au/plus/s/FzDTSZy6t8PBJ2N/download"
   to="$DIR/melbourne.osm"
