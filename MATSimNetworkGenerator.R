@@ -112,6 +112,11 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   system.time(intersectionsSimplified <- simplifyIntersections(largestComponent[[1]],
                                                                largestComponent[[2]],
                                                                20))
+  # separating the bikepaths
+  bikepaths_edges <- intersectionsSimplified[[2]] %>% 
+    filter(highway=="cycleway") 
+  intersectionsSimplified[[2]] <- intersectionsSimplified[[2]] %>% 
+    filter(highway!="cycleway")
   
   # Merge edges going between the same two nodes, picking the shortest geometry.
   # * One-way edges going in the same direction will be merged
@@ -121,14 +126,14 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   # * Non-car edges do NOT count towards the merged lane count (permlanes)
   system.time(edgesCombined <- combineRedundantEdges(intersectionsSimplified[[1]],
                                                      intersectionsSimplified[[2]]))
-  
+
   # Merge one-way and two-way edges going between the same two nodes. In these 
   # cases, the merged attributes will be two-way.
   # This guarantees that there will only be a single edge between any two nodes.
   system.time(combinedUndirectedAndDirected <- 
                 combineUndirectedAndDirectedEdges(edgesCombined[[1]],
                                                   edgesCombined[[2]]))
-  
+
   # If there is a chain of edges between intersections, merge them together
   system.time(edgesSimplified <- simplifyLines(combinedUndirectedAndDirected[[1]],
                                                combinedUndirectedAndDirected[[2]]))
@@ -142,6 +147,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   system.time(combinedUndirectedAndDirected2 <- 
                 combineUndirectedAndDirectedEdges(edgesCombined2[[1]],
                                                   edgesCombined2[[2]]))
+  
   system.time(edgesSimplified2 <- simplifyLines(combinedUndirectedAndDirected2[[1]],
                                                 combinedUndirectedAndDirected2[[2]]))
   system.time(edgesCombined3 <- combineRedundantEdges(edgesSimplified2[[1]],
@@ -151,8 +157,16 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
                 makeEdgesDirect(edgesCombined3[[1]],
                                 edgesCombined3[[2]]))
   
-  # add mode to edges, add type to nodes, change bikeway from numbers to text
-  networkRestructured <- restructureData(networkDirect)
+  # simplify geometry so all edges are straight lines for bike paths
+  bikepaths_nodes <- intersectionsSimplified[[1]] %>% 
+    filter(id %in% bikepaths_edges$from_id | id %in% bikepaths_edges$to_id)
+  system.time(networkDirect_bikepath <- 
+                makeEdgesDirect(bikepaths_nodes,
+                                bikepaths_edges))
+
+  # add mode to edges, add type to nodes, change cycleway from numbers to text
+  networkRestructured <- restructureData(networkDirect, networkDirect_bikepath)
+
   if(addElevation) system.time(networkRestructured[[1]] <- addElevation2Nodes(networkRestructured[[1]], 
                                                                         'data/DEMx10EPSG28355.tif'))
   if(addGtfs) system.time(networkRestructured[[2]] <- addGtfsLinks(networkRestructured[[1]], 

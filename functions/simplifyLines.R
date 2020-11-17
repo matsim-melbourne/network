@@ -18,10 +18,7 @@
 # nodes <-combinedUndirectedAndDirected[[1]]
 # edges <-combinedUndirectedAndDirected[[2]]
 simplifyLines <- function(nodes,edges){
-    
-  nodesNoGeom <- nodes %>%
-    st_drop_geometry()
-  
+
   edgesNoGeom <- edges %>%
     st_drop_geometry()
   
@@ -31,6 +28,8 @@ simplifyLines <- function(nodes,edges){
     dplyr::select(from,to) %>%
     distinct()
     
+  nodesNoGeom <- nodes %>%
+    st_drop_geometry()
   
   # the node ids of intersections (not a dataframe)
   nodesIntersections <- rbind(
@@ -194,7 +193,6 @@ simplifyLines <- function(nodes,edges){
     as.data.frame() %>%
     st_sf()
 
-  
   return(list(nodesIntersectionsGeom,allEdges))
   
 }

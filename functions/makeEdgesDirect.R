@@ -10,13 +10,12 @@ makeEdgesDirect <- function(nodes_current,edges_current){
   edges_current <- edges_current %>%
     filter(!is.na(from_id)) %>%
     st_drop_geometry() %>%
-    left_join(nodes_current,by=c("from_id"="id")) %>%
+    left_join(st_drop_geometry(nodes_current),by=c("from_id"="id")) %>%
     rename(fromX=X,fromY=Y) %>%
-    left_join(nodes_current,by=c("to_id"="id")) %>%
+    left_join(st_drop_geometry(nodes_current),by=c("to_id"="id")) %>%
     rename(toX=X,toY=Y) %>%
     mutate(geom=paste0("LINESTRING(",fromX," ",fromY,",",toX," ",toY,")")) %>%
     st_as_sf(wkt = "geom", crs = 28355)
-  
   return(list(nodes_current,edges_current))
 }
 
