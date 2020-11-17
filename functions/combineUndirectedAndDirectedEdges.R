@@ -44,9 +44,9 @@ combineUndirectedAndDirectedEdges <- function(nodes_current,edges_current){
     summarise(uid=min(uid,na.rm=T),length=min(length,na.rm=T),
               from_id=min(min_from_id,na.rm=T),to_id=max(min_to_id,na.rm=T),
               freespeed=max(freespeed,na.rm=T),permlanes=sum(permlanes,na.rm=T),
-              capacity=sum(capacity,na.rm=T),is_oneway=min(undirected_road,na.rm=T),
+              laneCapacity=sum(laneCapacity,na.rm=T),is_oneway=min(undirected_road,na.rm=T),
               cycleway=max(cycleway,na.rm=T),
-              highway=max(highway,na.rm=T),
+              highway_order=min(highway_order,na.rm=T), # selecting the highest rank
               is_cycle=max(is_cycle,na.rm=T),is_walk=max(is_walk,na.rm=T),
               is_car=max(is_car,na.rm=T),
               from_id_directed=max(from_id_directed,na.rm=T),

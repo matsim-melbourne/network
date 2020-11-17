@@ -89,11 +89,12 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   
   osm_metadata <- st_read(networkSqlite,layer="osm_metadata",quiet=T)
   defaults_df <- buildDefaultsDF()
+  highway_lookup <- defaults_df %>% dplyr::select(highway, highway_order)
   system.time( osmAttributes <- processOsmTags(osm_metadata,defaults_df))
   
   edgesAttributed <- networkInput[[2]] %>%
     inner_join(osmAttributes, by="osm_id") %>%
-    dplyr::select(-osm_id,highway)
+    dplyr::select(-osm_id,highway,highway_order)
   
   cat(paste0("edgesAttributed:\n"))
   str(edgesAttributed)
@@ -114,9 +115,11 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
                                                                20))
   # separating the bikepaths
   bikepaths_edges <- intersectionsSimplified[[2]] %>% 
-    filter(highway=="cycleway") 
+    filter(highway=="cycleway") %>% 
+    dplyr::select(-highway) # using highway_order for merging instead
   intersectionsSimplified[[2]] <- intersectionsSimplified[[2]] %>% 
-    filter(highway!="cycleway")
+    filter(highway!="cycleway") %>% 
+    dplyr::select(-highway) # using highway_order for merging instead
   
   # Merge edges going between the same two nodes, picking the shortest geometry.
   # * One-way edges going in the same direction will be merged
@@ -165,7 +168,8 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
                                 bikepaths_edges))
 
   # add mode to edges, add type to nodes, change cycleway from numbers to text
-  networkRestructured <- restructureData(networkDirect, networkDirect_bikepath)
+  networkRestructured <- restructureData(networkDirect, networkDirect_bikepath, 
+                                         highway_lookup)
 
   if(addElevation) system.time(networkRestructured[[1]] <- addElevation2Nodes(networkRestructured[[1]], 
                                                                         'data/DEMx10EPSG28355.tif'))

@@ -15,7 +15,7 @@ processOsmTags <- function(osm_df,this_defaults_df){
   
   osmWithDefaults <- osmWithDefaults %>%
     mutate(cycleway=ifelse(highway=="cycleway",4,0)) %>%
-    dplyr::select(osm_id,highway,freespeed,permlanes,capacity,is_oneway,cycleway,is_cycle,is_walk,is_car)
+    dplyr::select(osm_id,highway,highway_order,freespeed,permlanes,laneCapacity,is_oneway,cycleway,is_cycle,is_walk,is_car)
 
   getMetadataInfo <- function(i) {
     df <- osmWithDefaults[i,]
@@ -46,8 +46,8 @@ processOsmTags <- function(osm_df,this_defaults_df){
         # some osm tags set the number of lanes to zero
         # added is.na since one of the lanes has a value of "2; 3"
         if(!is.na(newLanes) & newLanes > 0) {
-          # recalibrating the capacity
-          df$capacity[1]= df$capacity[1] * (newLanes/df$permlanes[1])
+          # recalibrating the laneCapacity
+          df$laneCapacity[1]= df$laneCapacity[1] * (newLanes/df$permlanes[1])
           df$permlanes[1]=newLanes
         }
       }
@@ -73,9 +73,9 @@ processOsmTags <- function(osm_df,this_defaults_df){
     
   # this code probably isn't needed anymore as it's been implemented in the getMetadataInfo function
     # osmAttributedCleaned  <- osmAttributedWithModes %>%
-    #   filter(!is.na(modes) & !is.na(freespeed) & !is.na(permlanes) & !is.na(capacity)) %>%
+    #   filter(!is.na(modes) & !is.na(freespeed) & !is.na(permlanes) & !is.na(laneCapacity)) %>%
     #   mutate(permlanes = replace(permlanes, permlanes == 0.0, 1.0)) %>% 
-    #   mutate(capacity = replace(capacity, capacity == 0.0, 100.0))
+    #   mutate(laneCapacity = replace(laneCapacity, laneCapacity == 0.0, 100.0))
                     
   return(osmAttributed)
 }

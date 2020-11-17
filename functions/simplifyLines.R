@@ -132,9 +132,9 @@ simplifyLines <- function(nodes,edges){
     group_by(cluster_id,from_id,to_id) %>%
     summarise(length=sum(length,na.rm=T),
               freespeed=max(freespeed,na.rm=T),permlanes=max(permlanes,na.rm=T),
-              capacity=max(capacity,na.rm=T),is_oneway=max(is_oneway,na.rm=T),
+              laneCapacity=max(laneCapacity,na.rm=T),is_oneway=max(is_oneway,na.rm=T),
               cycleway=max(cycleway,na.rm=T),
-              highway=max(highway,na.rm=T),
+              highway_order=min(highway_order,na.rm=T), # selecting the highest rank
               is_cycle=max(is_cycle,na.rm=T),is_walk=max(is_walk,na.rm=T),
               is_car=max(is_car,na.rm=T),geom=st_combine(geom)) %>%
     st_sf() %>%
@@ -175,9 +175,9 @@ simplifyLines <- function(nodes,edges){
     group_by(cluster_id,from_id,to_id) %>%
     summarise(length=sum(length,na.rm=T),
               freespeed=max(freespeed,na.rm=T),permlanes=max(permlanes,na.rm=T),
-              capacity=max(capacity,na.rm=T),is_oneway=0,
+              laneCapacity=max(laneCapacity,na.rm=T),is_oneway=0,
               cycleway=max(cycleway,na.rm=T),
-              highway=max(highway,na.rm=T),
+              highway_order=min(highway_order,na.rm=T), # selecting the highest rank
               is_cycle=max(is_cycle,na.rm=T),is_walk=max(is_walk,na.rm=T),
               is_car=max(is_car,na.rm=T),geom=st_combine(geom)) %>%
     st_sf() %>%

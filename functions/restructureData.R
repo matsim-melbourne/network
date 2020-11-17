@@ -1,5 +1,7 @@
 # networkAttributed=networkDirect
-restructureData <- function(networkDirect, networkDirect_bikepath){
+restructureData <- function(networkDirect, networkDirect_bikepath, 
+                            highway_lookup){
+  
   nodes <- networkDirect[[1]]
   links <- networkDirect[[2]]
   nodes_bp <- networkDirect_bikepath[[1]]
@@ -30,15 +32,11 @@ restructureData <- function(networkDirect, networkDirect_bikepath){
   # lane               = 2
   # shared_lane        = 1
   # no_lane/no_cycling = 0
-
+  
   links <- links %>%  
     st_drop_geometry() %>%
-    # sf::st_coordinates() %>%
-    # as.data.frame() %>%
-    # cbind(name=c("from","to")) %>%
-    # tidyr::pivot_wider(names_from = name, values_from = c(X,Y)) %>% 
-    # cbind(st_drop_geometry(links)) %>%
-    # add in mode
+    left_join(highway_lookup, by="highway_order") %>%  # Adding back the highway tags 
+    mutate(capacity=laneCapacity*permlanes) %>% # capacity for all lanes
     mutate(modes=ifelse(                is_car==1,                          "car",    NA)) %>%
     mutate(modes=ifelse(!is.na(modes)&is_cycle==1, paste(modes,"bicycle",sep=","), modes)) %>%
     mutate(modes=ifelse( is.na(modes)&is_cycle==1,                      "bicycle", modes)) %>%
