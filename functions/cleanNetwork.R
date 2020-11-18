@@ -31,17 +31,7 @@ cleanNetwork <- function(networkRestructured, network_modes = "car"){
     filter(from_id != to_id) %>% 
     filter(capacity != "NA" & capacity != "0.0" & modes != "NA")
   
-  #if(ivabm_pt_flag){
-  #  lines_df  <-lines_df %>% mutate(id = paste("p",from_id, to_id, row_number(), sep = "_"))%>%
-  #    mutate(from_id=paste0("p_",from_id)) %>% 
-  #    mutate(to_id=paste0("p_",to_id))  
-  #  nodes_df <- nodes_df %>% mutate(id = paste0("p_",id))
-  #}
-    
-  # Removing repetitive links
-  lines_df <- lines_df %>% 
-    distinct(from_id,to_id, .keep_all = TRUE)
-  
+
   if(network_modes!=""){
     lines_df_filtered <- lines_df[0,]
     for (mode in network_modes){
