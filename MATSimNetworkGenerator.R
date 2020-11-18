@@ -154,7 +154,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
                                 edgesCombined3[[2]]))
   
   # add mode to edges, add type to nodes, change cycleway from numbers to text
-  networkRestructured <- restructureData(networkDirect, highway_lookup)
+  networkRestructured <- restructureData(networkDirect, highway_lookup,defaults_df)
 
   if(addElevation) system.time(networkRestructured[[1]] <- addElevation2Nodes(networkRestructured[[1]], 
                                                                         'data/DEMx10EPSG28355.tif'))

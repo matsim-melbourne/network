@@ -1,5 +1,5 @@
 # networkAttributed=networkDirect
-restructureData <- function(networkDirect, highway_lookup){
+restructureData <- function(networkDirect, highway_lookup, defaults_df){
   
   nodes <- networkDirect[[1]]
   links <- networkDirect[[2]]
