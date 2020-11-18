@@ -1,17 +1,31 @@
 # networkAttributed=networkDirect
-restructureData <- function(networkDirect, networkDirect_bikepath, 
-                            highway_lookup){
+restructureData <- function(networkDirect, highway_lookup){
   
   nodes <- networkDirect[[1]]
   links <- networkDirect[[2]]
-  nodes_bp <- networkDirect_bikepath[[1]]
-  links_bp <- networkDirect_bikepath[[2]]
   
-  # Merging bikepaths and total networks
-  nodes <- bind_rows(nodes, nodes_bp) %>% 
-    distinct(.keep_all = T)
   links <- links %>% 
-    bind_rows(links_bp)
+    mutate(uid=row_number()) 
+  # finding merged bikepath ids
+  bikepath_uids <- links %>% 
+    st_drop_geometry() %>% 
+    filter(cycleway=="4" & highway_order<15) %>% 
+    dplyr::select(uid) %>% unlist() %>%  as.double()
+  # changing merged bikepaths to regular bikepaths
+  bikepaths <- links %>% 
+    filter(uid %in% bikepath_uids) %>% 
+    mutate(highway_order=15) %>% 
+    mutate(freespeed=defaults_df$freespeed[15]) %>% 
+    mutate(laneCapacity=defaults_df$laneCapacity[15]) %>% 
+    mutate(is_car=0) %>% 
+    mutate(permlanes=1) %>% # bikepaths are assumed sinlge lane
+    mutate(is_oneway=0) %>% # bikepaths are assumed bi-directional 
+    dplyr::select(-uid)
+  # merging changed bikepaths back with rest of the links
+  links <- links %>% 
+    mutate(cycleway=ifelse(uid %in% bikepath_uids,0,cycleway)) %>% # removing bikepaths from those that had it merged 
+    dplyr::select(-uid) %>% 
+    rbind(bikepaths)
   
   nodes <- nodes %>% # Changing to MATSim expected format
     mutate(x = as.numeric(sf::st_coordinates(.)[,1]),

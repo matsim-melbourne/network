@@ -113,13 +113,6 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   system.time(intersectionsSimplified <- simplifyIntersections(largestComponent[[1]],
                                                                largestComponent[[2]],
                                                                20))
-  # separating the bikepaths
-  bikepaths_edges <- intersectionsSimplified[[2]] %>% 
-    filter(highway=="cycleway") %>% 
-    dplyr::select(-highway) # using highway_order for merging instead
-  intersectionsSimplified[[2]] <- intersectionsSimplified[[2]] %>% 
-    filter(highway!="cycleway") %>% 
-    dplyr::select(-highway) # using highway_order for merging instead
   
   # Merge edges going between the same two nodes, picking the shortest geometry.
   # * One-way edges going in the same direction will be merged
@@ -160,16 +153,8 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
                 makeEdgesDirect(edgesCombined3[[1]],
                                 edgesCombined3[[2]]))
   
-  # simplify geometry so all edges are straight lines for bike paths
-  bikepaths_nodes <- intersectionsSimplified[[1]] %>% 
-    filter(id %in% bikepaths_edges$from_id | id %in% bikepaths_edges$to_id)
-  system.time(networkDirect_bikepath <- 
-                makeEdgesDirect(bikepaths_nodes,
-                                bikepaths_edges))
-
   # add mode to edges, add type to nodes, change cycleway from numbers to text
-  networkRestructured <- restructureData(networkDirect, networkDirect_bikepath, 
-                                         highway_lookup)
+  networkRestructured <- restructureData(networkDirect, highway_lookup)
 
   if(addElevation) system.time(networkRestructured[[1]] <- addElevation2Nodes(networkRestructured[[1]], 
                                                                         'data/DEMx10EPSG28355.tif'))
