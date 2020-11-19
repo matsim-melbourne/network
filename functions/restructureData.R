@@ -24,9 +24,10 @@ restructureData <- function(networkDirect, highway_lookup, defaults_df){
   # merging changed bikepaths back with rest of the links
   links <- links %>% 
     mutate(cycleway=ifelse(uid %in% bikepath_uids,0,cycleway)) %>% # removing bikepaths from those that had it merged 
+    mutate(is_cycle=ifelse(highway_order%in%c(1,8,2,9),0,is_cycle)) %>% # removing bikepaths from those that had it merged 
     dplyr::select(-uid) %>% 
     rbind(bikepaths)
-  
+
   nodes <- nodes %>% # Changing to MATSim expected format
     mutate(x = as.numeric(sf::st_coordinates(.)[,1]),
            y = as.numeric(sf::st_coordinates(.)[,2])) %>% 
