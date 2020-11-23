@@ -19,11 +19,147 @@ addGtfsLinks <- function(nodes,
   return(links)
 }
 
-processGtfs <- function(n_df,
+
+processGtfs <- function(outputLocation="./gtfs/",
+                        networkNodes,
                         gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip", 
                         analysis_start = as.Date("2019-10-11","%Y-%m-%d"), 
                         analysis_end = as.Date("2019-10-17","%Y-%m-%d"),
                         studyRegion=NA){
+  # outputLocation="./gtfs/"
+  # networkNodes = validRoadNodes
+  # gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip"
+  # analysis_start = as.Date("2019-10-11","%Y-%m-%d")
+  # analysis_end = as.Date("2019-10-17","%Y-%m-%d")
+
+  dir.create(outputLocation, showWarnings = FALSE)
+  
+  gtfs <- read_gtfs(gtfs_feed)
+  
+  validCalendar <- gtfs$calendar %>%
+    filter(start_date<=analysis_end & end_date>=analysis_start) %>%
+    filter(wednesday==1)
+  
+  # trips during within the time period
+  validTrips <- gtfs$trips %>%
+    filter(service_id %in% validCalendar$service_id) %>%
+    dplyr::select(route_id,service_id,trip_id) %>%
+    mutate(route_id=as.factor(route_id))
+  
+  # routes that are part of a valid trip
+  validRoutes <- gtfs$routes %>%
+    filter(route_id %in% validTrips$route_id) %>%
+    mutate(service_type="null",
+           service_type=ifelse(agency_id%in%c(3)   & route_type%in%c(0),  "tram" ,service_type),
+           service_type=ifelse(agency_id%in%c(1,2) & route_type%in%c(1,2),"train",service_type),
+           service_type=ifelse(agency_id%in%c(4,6) & route_type%in%c(3),  "bus"  ,service_type)) %>%
+    filter(service_type!="null") %>%
+    mutate(route_id=as.factor(route_id)) %>%
+    mutate(service_type=as.factor(service_type)) %>%
+    dplyr::select(route_id,service_type)
+  
+  # some trips won't have any valid routes, so they must be removed
+  validTrips <- validTrips %>%
+    filter(route_id %in% validRoutes$route_id)
+  
+  # stopTimes that are part of a valid trip
+  system.time( # takes about 6 seconds
+    validStopTimes <- gtfs$stop_times %>%
+      mutate(trip_id=as.factor(trip_id),
+             stop_id=as.factor(stop_id)) %>%
+      filter(trip_id %in% validTrips$trip_id) %>%
+      mutate(arrival_time=as.numeric(as_hms(arrival_time)),
+             departure_time=as.numeric(as_hms(departure_time))) %>%
+      dplyr::select(trip_id,arrival_time,departure_time,stop_id,stop_sequence) %>%
+      filter(!is.na(arrival_time)) %>% # some of the schedule goes past 24 hours
+      arrange(trip_id,stop_sequence)
+  )
+  
+  
+  # stops that have a valid stopTime
+  validStops <- gtfs$stops %>%
+    mutate(stop_id=as.factor(stop_id)) %>%
+    filter(stop_id %in% validStopTimes$stop_id) %>%
+    dplyr::select(stop_id,stop_lat,stop_lon) %>%
+    st_as_sf(coords=c("stop_lon", "stop_lat"), crs=4326) %>%
+    st_transform(28355) %>%
+    st_snap_to_grid(1)
+  
+  # only want stops within the study region
+  if(!is.na(studyRegion)){
+    message("Cropping to study region")
+    validStops <- validStops %>%
+      filter(lengths(st_intersects(., studyRegion)) > 0)
+  }
+  # st_write(validStops,"stops.sqlite",delete_layer=TRUE)
+  
+  # snapping the stops to the nearest node in the road network
+  networkNodes <- networkNodes %>%
+    mutate(tmp_id=row_number())
+  nearestNodeId <- st_nearest_feature(validStops,networkNodes)
+  
+  # subsetting the networkNodes and rearranging to match validStops
+  nearestNode <- networkNodes[nearestNodeId,]
+  
+  # calculating the distance from each stop to the nearest node in the road network
+  distanceToNetwork <- st_distance(validStops,nearestNode,by_element=TRUE) %>%
+    as.numeric()
+  
+  
+  validStopsSnapped <- nearestNode %>%
+    mutate(stop_id=validStops$stop_id) %>%
+    mutate(dist=distanceToNetwork) %>%
+    filter(dist<=1000) %>%
+    dplyr::select(stop_id,id,x,y) #'stop_id' is the gtfs id, 'id' is the network node id
+    
+    
+  st_write(validStopsSnapped,"data/stopsSnapped.sqlite",delete_layer=TRUE)
+  
+  validStopTimesSnapped <- validStopTimes %>%
+    inner_join(st_drop_geometry(validStopsSnapped),by="stop_id") %>% # IMPORTANT: this join also removes the stops outside of the region!
+    arrange(trip_id,stop_sequence) %>%
+    group_by(trip_id) %>%
+    # when we use the snapped locations, two sequential stops may be at the same
+    # location. If this is the case, we remove the later stop.
+    filter(id!=lag(id)) %>%
+    mutate(stop_sequence=row_number()) %>%
+    ungroup() %>%
+    dplyr::select(trip_id,stop_sequence,arrival_time,departure_time,stop_id,id,x,y)
+  
+  # some trips will no longer be present
+  validTripsSnapped <- validTrips %>%
+    filter(trip_id %in% validStopTimesSnapped$trip_id)
+  
+  # some routes will no longer be present
+  validRoutesSnapped <- validRoutes %>%
+    filter(route_id %in% validTripsSnapped$route_id)
+    
+  
+  # replace stop_id with id (i.e., use the network node id instead of the stop
+  # id provided by the GTFS feed)
+  validStopsSnappedFinal <- validStopsSnapped %>%
+    dplyr::select(-stop_id) %>%
+    distinct(id,x,y) %>%
+    rename(stop_id=id)
+  validStopTimesSnappedFinal <- validStopTimesSnapped %>%
+    dplyr::select(-stop_id) %>%
+    rename(stop_id=id)
+  
+  # writing the exports to file
+  st_write(validStopsSnappedFinal,paste0(outputLocation,"stops.sqlite"),delete_layer=T)
+  saveRDS(validStopTimesSnappedFinal, file=paste0(outputLocation,"stopTimes.rds"))
+  saveRDS(validTripsSnapped, file=paste0(outputLocation,"trips.rds"))
+  saveRDS(validRoutesSnapped, file=paste0(outputLocation,"routes.rds"))
+}
+  
+
+
+processGtfs2 <- function(n_df,
+                        gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip", 
+                        analysis_start = as.Date("2019-10-11","%Y-%m-%d"), 
+                        analysis_end = as.Date("2019-10-17","%Y-%m-%d"),
+                        studyRegion=NA){
+  # n_df = validRoadNodes
   # gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip"
   # analysis_start = as.Date("2019-10-11","%Y-%m-%d")
   # analysis_end = as.Date("2019-10-17","%Y-%m-%d")
@@ -54,17 +190,19 @@ processGtfs <- function(n_df,
   validTrips <- validTrips %>%
     filter(route_id %in% validRoutes$route_id)
   
-  system.time( # takes about 40 seconds
+  system.time( # takes about 6 seconds
     validStopTimes <- gtfs$stop_times %>%
       mutate(trip_id=as.factor(trip_id),
              stop_id=as.factor(stop_id)) %>%
       filter(trip_id %in% validTrips$trip_id) %>%
-      mutate(arrival_time=as.numeric(as.hms(arrival_time)),
-             departure_time=as.numeric(as.hms(departure_time))) %>%
+      mutate(arrival_time=as.numeric(as_hms(arrival_time)),
+             departure_time=as.numeric(as_hms(departure_time))) %>%
       dplyr::select(trip_id,arrival_time,departure_time,stop_id,stop_sequence) %>%
       filter(!is.na(arrival_time)) %>% # some of the schedule goes past 24 hours
       arrange(trip_id,stop_sequence)
   )
+  
+
   
   validStops <- gtfs$stops %>%
     mutate(stop_id=as.factor(stop_id)) %>%
@@ -74,44 +212,44 @@ processGtfs <- function(n_df,
     st_transform(28355) %>%
     st_snap_to_grid(1)
   
-  # read in the study region boundary # TODO Study region
-  #studyRegion <- st_read("study_regions.gpkg",layer="study_regions") %>%
-  #  filter(name=="Melbourne") %>%
-  #  st_geometry() %>%
-  #  st_transform(28355) %>%
-  #  st_buffer(100) %>%
-  #  st_snap_to_grid(1)
-  
   # TODO Cropping to study region is not removing the trips outside e.g. T0.3-86-mjp-1.2.H is outside GMElb area
   # only want stops within the study region
-  #if(!is.na(studyRegion)){
-  #  message("Cropping to study region")
-    #validStops <- validStops %>%
-       #filter(lengths(st_intersects(., studyRegion)) > 0) 
-  #}
+  if(!is.na(studyRegion)){
+    message("Cropping to study region")
+    validStops <- validStops %>%
+      filter(lengths(st_intersects(., studyRegion)) > 0)
+  }
   #validStops <- validStops %>%
   #  filter(lengths(st_intersects(., studyRegion)) > 0)
-  st_write(validStops,"data/stops.sqlite",delete_layer=TRUE)
+  # st_write(validStops,"stops.sqlite",delete_layer=TRUE)
   
   # now need to snap the stops to intersections in the simplified network
   # networkIntersections <- st_read("data/networkSimplified.sqlite",layer="nodes") %>%
   networkIntersections <- n_df %>%
     mutate(tmp_id=row_number())
   nearestIntersection <- st_nearest_feature(validStops,networkIntersections)
+  networkIntersectionsClosest <- networkIntersections[nearestIntersection,]
+  distanceToNetwork <- st_distance(validStops,
+                                   networkIntersectionsClosest,
+                                   by_element=TRUE) %>%
+    as.numeric()
   
+
   
   validStopsSnapped <- validStops %>%
     st_drop_geometry() %>%
     mutate(tmp_id=nearestIntersection) %>%
-    left_join(networkIntersections,by="tmp_id")%>%
+    mutate(dist=distanceToNetwork) %>%
+    left_join(networkIntersectionsClosest,by="tmp_id") %>%
     st_sf() %>%
+    filter(dist<=1000) %>%
     dplyr::select(stop_id,id,x,y) #'stop_id' is the gtfs id, 'id' is the network node id
   st_write(validStopsSnapped,"data/stopsSnapped.sqlite",delete_layer=TRUE)
   
   validStopTimesSnapped <- validStopTimes %>%
     right_join(st_drop_geometry(validStopsSnapped),by="stop_id") %>% # IMPORTANT: this join also removes the stops outside of the region!
     arrange(trip_id,stop_sequence) %>%
-    dplyr::select(trip_id,stop_sequence,arrival_time,departure_time,id,x,y)
+    dplyr::select(trip_id,stop_sequence,arrival_time,departure_time,stop_id,id,x,y)
   
   vehicleTripMatching <- validTrips %>%
     left_join(validRoutes,by="route_id")
