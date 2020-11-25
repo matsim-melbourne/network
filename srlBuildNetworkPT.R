@@ -62,6 +62,15 @@ stopTimes <- readRDS(paste0(outputLocation,"stopTimes.rds"))
 trips <- readRDS(paste0(outputLocation,"trips.rds"))
 routes <- readRDS(paste0(outputLocation,"routes.rds"))
 
+stopsAttributed <- stopTimes %>%
+  dplyr::select(trip_id,stop_id) %>%
+  inner_join(trips) %>%
+  inner_join(routes) %>%
+  dplyr::select(stop_id,service_type) %>%
+  distinct() %>%
+  inner_join(stops) %>%
+  st_sf()
+st_write(stopsAttributed,paste0(outputLocation,"stopsAttributed.sqlite"),delete_layer=TRUE)
 
 
 # incorporating SRL -------------------------------------------------------
