@@ -96,7 +96,8 @@ ptEdges <- exportGtfsSchedule(
 )
 
 edgesCombined <- bind_rows(links,ptEdges) %>%
-  st_sf()
+  st_sf() %>%
+  mutate(cycleway=as.character(cycleway))
 
 exportSQlite(list(nodes,edgesCombined), outputFileName = "networkWithPT")
 
