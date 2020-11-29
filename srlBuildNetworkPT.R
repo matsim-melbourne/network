@@ -9,6 +9,8 @@ library(purrr)
 library(tidytransit)
 library(hablar)
 library(hms)
+library(XML)
+
 
 source('./functions/etc/logging.R')
 source('./functions/gtfs2PtNetwork.R')
@@ -22,15 +24,17 @@ source('./functions/exportXML.R')
 # import processed road network ------------------------------------------
 networkSqlite="generatedNetworks/roadNetwork.sqlite"
 
-networkInput <- list(st_read(networkSqlite,layer="nodes",quiet=T),
-                     st_read(networkSqlite,layer="links",quiet=T))
+nodes <- st_read(networkSqlite,layer="nodes",quiet=T)
+links <- st_read(networkSqlite,layer="links",quiet=T) %>%
+  # saving to sqlite makes column names lowercase, reverting to uppercase
+  rename(fromX=fromx, fromY=fromy, toX=tox, toY=toy)
 
 # read in the study region boundary
 studyRegion <- st_read("data/studyRegion.sqlite",quiet=T) %>%
   st_buffer(10000) %>%
   st_snap_to_grid(1)
 
-validRoadEdges <- networkInput[[2]] %>%
+validRoadEdges <- links %>%
   st_drop_geometry() %>%
   filter(is_walk==1 & is_car==1 & is_cycle==1) %>%
   dplyr::select(from_id,to_id)
@@ -74,5 +78,30 @@ st_write(stopsAttributed,paste0(outputLocation,"stopsAttributed.sqlite"),delete_
 
 
 # incorporating SRL -------------------------------------------------------
+
+# Steve to add in the SRL schedule here
+
+
+
+# combining SRL and road network ------------------------------------------
+
+
+# this returns the edges in the PT network as well as writing the
+# transitVehicles.xml and transitSchedule.xml
+ptEdges <- exportGtfsSchedule(
+  stops,
+  stopTimes,
+  trips,
+  routes
+)
+
+edgesCombined <- bind_rows(links,ptEdges) %>%
+  st_sf()
+
+exportSQlite(list(nodes,edgesCombined), outputFileName = "networkWithPT")
+
+# this stage will take about an hour to complete. Just focus on the sqlite
+# export for now.
+exportXML(list(nodes,edgesCombined), outputFileName = "networkWithPT")
 
 
