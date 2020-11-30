@@ -42,7 +42,7 @@ validRoadIds <- c(validRoadEdges$from_id,validRoadEdges$to_id) %>%
   unique()
 
 # network nodes that can be reached via walking, cycling, and driving.  
-validRoadNodes <- networkInput[[1]] %>%
+validRoadNodes <- networkInput[[1]] %>%    ###Steve note: I think 'networkInput[[1]]' should now be 'nodes'
   filter(id %in% validRoadIds) %>%
   st_set_crs(28355)
 # st_write(validRoadNodes,"validRoadNodes.sqlite",delete_layer=TRUE)
@@ -79,8 +79,61 @@ st_write(stopsAttributed,paste0(outputLocation,"stopsAttributed.sqlite"),delete_
 
 # incorporating SRL -------------------------------------------------------
 
-# Steve to add in the SRL schedule here
+#===============Code added by Steve starts here================================
+# requires file 'srl_stg1.sqlite', in EPSG:28355 - GDA 94 / MGA zone 55, containing two layers:
+#  - stations (point), with a 'sequence' field listing order of stations along line from one end to other
+#  - lines (linestring), containing separate line features each joining two adjacent stations 
 
+# function
+source('./functions/srl2PtNetwork.R')  ##SP note: to be moved to top
+
+# read in SRL stations and lines
+stations <- st_read("data/srl_stg1.sqlite",layer="stations")
+lines <- st_read("data/srl_stg1.sqlite",layer="lines")
+
+validRoadNodes <- st_read("data/validRoadNodes.sqlite", layer="validroadnodes")
+
+# set parameters for timetable 
+HOURS <- c("05:00:00", "24:00:00")  # start and end of timetable period
+INTERVAL <- 600  # 600 seconds, ie. 10 minutes  or, if using peak: c(600, 240, 600, 240, 600)
+SPEED <- 60  # km/h
+ROUTEIDs <- c("SRL1", "SRL2")  # identifiers for distinct service patterns (one in each direction)
+SERVICEID <- "SRL0"  # identifier for distinct set of dates when services operate
+SERVICETYPE <- "train"  # alternatively, "SRL" to distinguish from other trains, but would require changes in export functions
+
+## alternative for HOURS and INTERVAL allowing different intervals in peak periods
+## note must be one interval for each span of hours, so length of INTERVAL must be one less than length of HOURS 
+# HOURS <- c("05:00:00", "07:00:00", "09:00:00", "16:00:00", "18:00:00", "24:00:00")
+# INTERVAL <- c(600, 240, 600, 240, 600)  # 4 mins in peak periods; otherwise 10 mins
+
+
+outputLocation <- "./srl/"
+processSrl(
+  stations = stations,
+  lines = lines,
+  validRoadNodes = validRoadNodes,
+  HOURS = HOURS,
+  INTERVAL = INTERVAL,
+  SPEED = SPEED,
+  ROUTEIDs = ROUTEIDs,
+  SERVICEID = SERVICEID,
+  SERVICETYPE = SERVICETYPE)
+
+
+# read the outputs
+srlStops <- st_read(paste0(outputLocation,"srlStops.sqlite"),quiet=T)
+srlStopTimes <- readRDS(paste0(outputLocation,"srlStopTimes.rds"))
+srlTrips <- readRDS(paste0(outputLocation,"srlTrips.rds"))
+srlRoutes <- readRDS(paste0(outputLocation,"srlRoutes.rds"))
+
+
+# combine with the GTFS outputs, ready for export to XML
+stops <- bind_rows(stops, srlStops)
+stopTimes <- bind_rows(stopTimes, srlStopTimes)
+trips <- bind_rows(trips, srlTrips)
+routes <- bind_rows(routes, srlRoutes)
+
+#===============Code added by Steve ends here==================================
 
 
 # combining SRL and road network ------------------------------------------
