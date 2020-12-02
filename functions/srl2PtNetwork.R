@@ -1,4 +1,4 @@
-processSrl <- function(stations, lines, validRoadNodes,
+processSrl <- function(outputLocation, stations, lines, validRoadNodes,
                        HOURS, INTERVAL, SPEED,
                        ROUTEIDs, SERVICEID, SERVICETYPE) {
   

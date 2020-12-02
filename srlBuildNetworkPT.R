@@ -30,7 +30,7 @@ links <- st_read(networkSqlite,layer="links",quiet=T) %>%
   rename(fromX=fromx, fromY=fromy, toX=tox, toY=toy)
 
 # read in the study region boundary
-studyRegion <- st_read("data/studyRegion.sqlite",quiet=T) %>%
+greaterMelbourne <- st_read("data/studyRegion.sqlite",quiet=T) %>%
   st_buffer(10000) %>%
   st_snap_to_grid(1)
 
@@ -42,24 +42,21 @@ validRoadIds <- c(validRoadEdges$from_id,validRoadEdges$to_id) %>%
   unique()
 
 # network nodes that can be reached via walking, cycling, and driving.  
-validRoadNodes <- networkInput[[1]] %>%    ###Steve note: I think 'networkInput[[1]]' should now be 'nodes'
+validRoadNodes <- nodes %>%
   filter(id %in% validRoadIds) %>%
   st_set_crs(28355)
-# st_write(validRoadNodes,"validRoadNodes.sqlite",delete_layer=TRUE)
+# st_write(validRoadNodes,"./data/validRoadNodes.sqlite",delete_layer=TRUE)
 
 
 # process GTFS feed -------------------------------------------------------
 
 # process the GTFS feed and save the outputs to the gtfs folder
 outputLocation <- "./gtfs/"
-processGtfs(
-  outputLocation, # I don't state outputLocation=outputLocation as it can cause issues
-  networkNodes = validRoadNodes,
-  gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip", 
-  analysis_start = as.Date("2019-10-11","%Y-%m-%d"), 
-  analysis_end = as.Date("2019-10-17","%Y-%m-%d"),
-  studyRegion)
+processGtfs(outputLocation = outputLocation,
+            networkNodes = validRoadNodes,
+            studyRegion = greaterMelbourne)
   
+
 # read the outputs
 stops <- st_read(paste0(outputLocation,"stops.sqlite"),quiet=T)
 stopTimes <- readRDS(paste0(outputLocation,"stopTimes.rds"))
@@ -77,6 +74,27 @@ stopsAttributed <- stopTimes %>%
 st_write(stopsAttributed,paste0(outputLocation,"stopsAttributed.sqlite"),delete_layer=TRUE)
 
 
+# exporting base network --------------------------------------------------
+
+# this returns the edges in the PT network as well as writing the
+# transitVehicles.xml and transitSchedule.xml
+ptEdges <- exportGtfsSchedule(
+  outputLocation,
+  stops,
+  stopTimes,
+  trips,
+  routes
+)
+
+edgesCombined <- bind_rows(links,ptEdges) %>%
+  st_sf() %>%
+  mutate(cycleway=as.character(cycleway))
+
+exportSQlite(list(nodes,edgesCombined), outputFileName = "networkBase")
+# exportXML(list(nodes,edgesCombined), outputFileName = "networkWithSRL")
+
+
+
 # incorporating SRL -------------------------------------------------------
 
 #===============Code added by Steve starts here================================
@@ -91,7 +109,7 @@ source('./functions/srl2PtNetwork.R')  ##SP note: to be moved to top
 stations <- st_read("data/srl_stg1.sqlite",layer="stations")
 lines <- st_read("data/srl_stg1.sqlite",layer="lines")
 
-validRoadNodes <- st_read("data/validRoadNodes.sqlite", layer="validroadnodes")
+# validRoadNodes <- st_read("data/validRoadNodes.sqlite", layer="validroadnodes")
 
 # set parameters for timetable 
 HOURS <- c("05:00:00", "24:00:00")  # start and end of timetable period
@@ -109,6 +127,7 @@ SERVICETYPE <- "train"  # alternatively, "SRL" to distinguish from other trains,
 
 outputLocation <- "./srl/"
 processSrl(
+  outputLocation,
   stations = stations,
   lines = lines,
   validRoadNodes = validRoadNodes,
@@ -128,7 +147,7 @@ srlRoutes <- readRDS(paste0(outputLocation,"srlRoutes.rds"))
 
 
 # combine with the GTFS outputs, ready for export to XML
-stops <- bind_rows(stops, srlStops)
+stops <- bind_rows(stops, srlStops) %>% distinct()
 stopTimes <- bind_rows(stopTimes, srlStopTimes)
 trips <- bind_rows(trips, srlTrips)
 routes <- bind_rows(routes, srlRoutes)
@@ -142,6 +161,7 @@ routes <- bind_rows(routes, srlRoutes)
 # this returns the edges in the PT network as well as writing the
 # transitVehicles.xml and transitSchedule.xml
 ptEdges <- exportGtfsSchedule(
+  outputLocation,
   stops,
   stopTimes,
   trips,
@@ -152,10 +172,10 @@ edgesCombined <- bind_rows(links,ptEdges) %>%
   st_sf() %>%
   mutate(cycleway=as.character(cycleway))
 
-exportSQlite(list(nodes,edgesCombined), outputFileName = "networkWithPT")
+exportSQlite(list(nodes,edgesCombined), outputFileName = "networkWithSRL")
 
 # this stage will take about an hour to complete. Just focus on the sqlite
 # export for now.
-exportXML(list(nodes,edgesCombined), outputFileName = "networkWithPT")
+exportXML(list(nodes,edgesCombined), outputFileName = "networkWithSRL")
 
 

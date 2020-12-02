@@ -20,7 +20,7 @@ addGtfsLinks <- function(nodes,
 }
 
 
-processGtfs <- function(outputLocation="./gtfs/",
+processGtfs <- function(outputLocation="./test/",
                         networkNodes,
                         gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip", 
                         analysis_start = as.Date("2019-10-11","%Y-%m-%d"), 
@@ -113,7 +113,7 @@ processGtfs <- function(outputLocation="./gtfs/",
     dplyr::select(stop_id,id,x,y) #'stop_id' is the gtfs id, 'id' is the network node id
     
     
-  st_write(validStopsSnapped,"data/stopsSnapped.sqlite",delete_layer=TRUE)
+  # st_write(validStopsSnapped,paste0(outputLocation,"stopsSnapped.sqlite"),delete_layer=TRUE)
   
   validStopTimesSnapped <- validStopTimes %>%
     inner_join(st_drop_geometry(validStopsSnapped),by="stop_id") %>% # IMPORTANT: this join also removes the stops outside of the region!
@@ -153,7 +153,8 @@ processGtfs <- function(outputLocation="./gtfs/",
 }
 
 
-exportGtfsSchedule <- function(stops,
+exportGtfsSchedule <- function(outputLocation,
+                               stops,
                                stopTimes,
                                trips,
                                routes){
@@ -265,24 +266,24 @@ exportGtfsSchedule <- function(stops,
   cat(
     "<?xml version=\"1.0\" ?>
 <vehicleDefinitions xmlns=\"http://www.matsim.org/files/dtd\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.matsim.org/files/dtd http://www.matsim.org/files/dtd/vehicleDefinitions_v1.0.xsd\">\n",
-    file="./data/transitVehicles.xml",append=FALSE)
+    file=paste0(outputLocation,"transitVehicles.xml"),append=FALSE)
   for (i in 1:nrow(vehicleTypes)) {
-    cat(paste0("  <vehicleType id=\"",vehicleTypes[i,]$id,"\">\n"),file="./data/transitVehicles.xml",append=TRUE)
-    cat(paste0("    <description>",vehicleTypes[i,]$description,"</description>\n"),file="./data/transitVehicles.xml",append=TRUE)
-    cat(paste0("    <capacity>\n"),file="./data/transitVehicles.xml",append=TRUE)
-    cat(paste0("      <seats persons=\"",vehicleTypes[i,]$seats,"\"/>\n"),file="./data/transitVehicles.xml",append=TRUE)
-    cat(paste0("      <standingRoom persons=\"",vehicleTypes[i,]$standingRoom,"\"/>\n"),file="./data/transitVehicles.xml",append=TRUE)
-    cat(paste0("    </capacity>\n"),file="./data/transitVehicles.xml",append=TRUE)
-    cat(paste0("    <length meter=\"",vehicleTypes[i,]$length,"\"/>\n"),file="./data/transitVehicles.xml",append=TRUE)
-    cat(paste0("    <accessTime secondsPerPerson=\"",vehicleTypes[i,]$accessTime,"\"/>\n"),file="./data/transitVehicles.xml",append=TRUE)
-    cat(paste0("    <egressTime secondsPerPerson=\"",vehicleTypes[i,]$egressTime,"\"/>\n"),file="./data/transitVehicles.xml",append=TRUE)
-    cat(paste0("    <passengerCarEquivalents pce=\"",vehicleTypes[i,]$passengerCarEquivalents,"\"/>\n"),file="./data/transitVehicles.xml",append=TRUE)
-    cat(paste0("  </vehicleType>\n"),file="./data/transitVehicles.xml",append=TRUE)
+    cat(paste0("  <vehicleType id=\"",vehicleTypes[i,]$id,"\">\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+    cat(paste0("    <description>",vehicleTypes[i,]$description,"</description>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+    cat(paste0("    <capacity>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+    cat(paste0("      <seats persons=\"",vehicleTypes[i,]$seats,"\"/>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+    cat(paste0("      <standingRoom persons=\"",vehicleTypes[i,]$standingRoom,"\"/>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+    cat(paste0("    </capacity>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+    cat(paste0("    <length meter=\"",vehicleTypes[i,]$length,"\"/>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+    cat(paste0("    <accessTime secondsPerPerson=\"",vehicleTypes[i,]$accessTime,"\"/>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+    cat(paste0("    <egressTime secondsPerPerson=\"",vehicleTypes[i,]$egressTime,"\"/>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+    cat(paste0("    <passengerCarEquivalents pce=\"",vehicleTypes[i,]$passengerCarEquivalents,"\"/>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+    cat(paste0("  </vehicleType>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
   }
   for (i in 1:nrow(vehicles)) {
-    cat(paste0("  <vehicle id=\"",vehicles[i,]$id,"\" type=\"",vehicles[i,]$type,"\"/>\n"),file="./data/transitVehicles.xml",append=TRUE)
+    cat(paste0("  <vehicle id=\"",vehicles[i,]$id,"\" type=\"",vehicles[i,]$type,"\"/>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
   }
-  cat(paste0("</vehicleDefinitions>\n"),file="./data/transitVehicles.xml",append=TRUE)
+  cat(paste0("</vehicleDefinitions>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
   
   
   
@@ -293,26 +294,26 @@ exportGtfsSchedule <- function(stops,
 <!DOCTYPE transitSchedule SYSTEM \"http://www.matsim.org/files/dtd/transitSchedule_v1.dtd\">
 <transitSchedule>
   <transitStops>\n",
-    file="./data/transitSchedule.xml",append=FALSE)
+    file=paste0(outputLocation,"transitSchedule.xml"),append=FALSE)
   
   for (i in 1:nrow(transitStops)) {
     # for (i in 1:100) {
     cat(paste0("    <stopFacility id=\"",transitStops[i,]$stop_id,"\" isBlocking=\"false\" linkRefId=\"",
                transitStops[i,]$linkRefId,"\" x=\"",transitStops[i,]$x,"\" y=\"",
-               transitStops[i,]$y,"\"/>\n"),file="./data/transitSchedule.xml",append=TRUE)
+               transitStops[i,]$y,"\"/>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
   }
-  cat(paste0("  </transitStops>\n"),file="./data/transitSchedule.xml",append=TRUE)
-  cat(paste0("  <transitLine id=\"Melbourne\">\n"),file="./data/transitSchedule.xml",append=TRUE)
+  cat(paste0("  </transitStops>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+  cat(paste0("  <transitLine id=\"Melbourne\">\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
   
   # TODO Ask @Alan to check this part:
-  # for (i in 1:nrow(vehicleTripMatching)) {
-  for (i in 1:100) {
+  for (i in 1:nrow(vehicleTripMatching)) {
+  # for (i in 1:100) {
     routeProfileCurrent <- routeProfile%>%filter(trip_id==vehicleTripMatching[i,]$trip_id) 
     if(nrow(routeProfileCurrent)>0){ # I added this to drop those empty route profiles
-      cat(paste0("    <transitRoute id=\"",vehicleTripMatching[i,]$trip_id,"\">\n"),file="./data/transitSchedule.xml",append=TRUE)
-      cat(paste0("      <description>",vehicleTripMatching[i,]$service_id,"</description>\n"),file="./data/transitSchedule.xml",append=TRUE)
-      cat(paste0("      <transportMode>",vehicleTripMatching[i,]$service_type,"</transportMode>\n"),file="./data/transitSchedule.xml",append=TRUE)
-      cat(paste0("      <routeProfile>\n"),file="./data/transitSchedule.xml",append=TRUE)
+      cat(paste0("    <transitRoute id=\"",vehicleTripMatching[i,]$trip_id,"\">\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+      cat(paste0("      <description>",vehicleTripMatching[i,]$service_id,"</description>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+      cat(paste0("      <transportMode>",vehicleTripMatching[i,]$service_type,"</transportMode>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+      cat(paste0("      <routeProfile>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
       
       for (j in 1:nrow(routeProfileCurrent)) {
         cat(paste0("        <stop arrivalOffset=\"",
@@ -321,18 +322,18 @@ exportGtfsSchedule <- function(stops,
                    routeProfileCurrent[j,]$departureOffset,
                    "\" refId=\"",
                    routeProfileCurrent[j,]$refId,
-                   "\"/>\n"),file="./data/transitSchedule.xml",append=TRUE)
+                   "\"/>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
       }
-      cat(paste0("      </routeProfile>\n"),file="./data/transitSchedule.xml",append=TRUE)
-      cat(paste0("      <route>\n"),file="./data/transitSchedule.xml",append=TRUE)
+      cat(paste0("      </routeProfile>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+      cat(paste0("      <route>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
       for (j in 1:nrow(routeProfileCurrent)) {
         cat(paste0("        <link refId=\"",
                    paste0(routeProfileCurrent[j,]$from_id,"_",routeProfileCurrent[j,]$to_id),
-                   "\"/>\n"),file="./data/transitSchedule.xml",append=TRUE)
+                   "\"/>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
       }
-      cat(paste0("      </route>\n"),file="./data/transitSchedule.xml",append=TRUE)
+      cat(paste0("      </route>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
       
-      cat(paste0("      <departures>\n"),file="./data/transitSchedule.xml",append=TRUE)
+      cat(paste0("      <departures>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
       departuresCurrent <- departures%>%filter(vehicleRefId==vehicleTripMatching[j,]$trip_id)
       for (k in 1:nrow(departuresCurrent)) {
         cat(paste0("        <departure departureTime=\"",
@@ -341,15 +342,15 @@ exportGtfsSchedule <- function(stops,
                    departuresCurrent[k,]$id,
                    "\" vehicleRefId=\"",
                    departuresCurrent[k,]$vehicleRefId,
-                   "\"/>\n"),file="./data/transitSchedule.xml",append=TRUE)
+                   "\"/>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
       }   
-      cat(paste0("      </departures>\n"),file="./data/transitSchedule.xml",append=TRUE)
-      cat(paste0("    </transitRoute>\n"),file="./data/transitSchedule.xml",append=TRUE)
-    }
+      cat(paste0("      </departures>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+      cat(paste0("    </transitRoute>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+  s  }
     
   }
-  cat(paste0("  </transitLine>\n"),file="./data/transitSchedule.xml",append=TRUE)
-  cat(paste0("</transitSchedule>\n"),file="./data/transitSchedule.xml",append=TRUE)
+  cat(paste0("  </transitLine>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+  cat(paste0("</transitSchedule>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
   
   
   
@@ -579,24 +580,24 @@ processGtfs <- function(n_df,
   cat(
     "<?xml version=\"1.0\" ?>
 <vehicleDefinitions xmlns=\"http://www.matsim.org/files/dtd\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.matsim.org/files/dtd http://www.matsim.org/files/dtd/vehicleDefinitions_v1.0.xsd\">\n",
-    file="./data/transitVehicles.xml",append=FALSE)
+    file=paste0(outputLocation,"transitVehicles.xml"),append=FALSE)
   for (i in 1:nrow(vehicleTypes)) {
-    cat(paste0("  <vehicleType id=\"",vehicleTypes[i,]$id,"\">\n"),file="./data/transitVehicles.xml",append=TRUE)
-    cat(paste0("    <description>",vehicleTypes[i,]$description,"</description>\n"),file="./data/transitVehicles.xml",append=TRUE)
-    cat(paste0("    <capacity>\n"),file="./data/transitVehicles.xml",append=TRUE)
-    cat(paste0("      <seats persons=\"",vehicleTypes[i,]$seats,"\"/>\n"),file="./data/transitVehicles.xml",append=TRUE)
-    cat(paste0("      <standingRoom persons=\"",vehicleTypes[i,]$standingRoom,"\"/>\n"),file="./data/transitVehicles.xml",append=TRUE)
-    cat(paste0("    </capacity>\n"),file="./data/transitVehicles.xml",append=TRUE)
-    cat(paste0("    <length meter=\"",vehicleTypes[i,]$length,"\"/>\n"),file="./data/transitVehicles.xml",append=TRUE)
-    cat(paste0("    <accessTime secondsPerPerson=\"",vehicleTypes[i,]$accessTime,"\"/>\n"),file="./data/transitVehicles.xml",append=TRUE)
-    cat(paste0("    <egressTime secondsPerPerson=\"",vehicleTypes[i,]$egressTime,"\"/>\n"),file="./data/transitVehicles.xml",append=TRUE)
-    cat(paste0("    <passengerCarEquivalents pce=\"",vehicleTypes[i,]$passengerCarEquivalents,"\"/>\n"),file="./data/transitVehicles.xml",append=TRUE)
-    cat(paste0("  </vehicleType>\n"),file="./data/transitVehicles.xml",append=TRUE)
+    cat(paste0("  <vehicleType id=\"",vehicleTypes[i,]$id,"\">\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+    cat(paste0("    <description>",vehicleTypes[i,]$description,"</description>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+    cat(paste0("    <capacity>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+    cat(paste0("      <seats persons=\"",vehicleTypes[i,]$seats,"\"/>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+    cat(paste0("      <standingRoom persons=\"",vehicleTypes[i,]$standingRoom,"\"/>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+    cat(paste0("    </capacity>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+    cat(paste0("    <length meter=\"",vehicleTypes[i,]$length,"\"/>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+    cat(paste0("    <accessTime secondsPerPerson=\"",vehicleTypes[i,]$accessTime,"\"/>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+    cat(paste0("    <egressTime secondsPerPerson=\"",vehicleTypes[i,]$egressTime,"\"/>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+    cat(paste0("    <passengerCarEquivalents pce=\"",vehicleTypes[i,]$passengerCarEquivalents,"\"/>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+    cat(paste0("  </vehicleType>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
   }
   for (i in 1:nrow(vehicles)) {
-    cat(paste0("  <vehicle id=\"",vehicles[i,]$id,"\" type=\"",vehicles[i,]$type,"\"/>\n"),file="./data/transitVehicles.xml",append=TRUE)
+    cat(paste0("  <vehicle id=\"",vehicles[i,]$id,"\" type=\"",vehicles[i,]$type,"\"/>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
   }
-  cat(paste0("</vehicleDefinitions>\n"),file="./data/transitVehicles.xml",append=TRUE)
+  cat(paste0("</vehicleDefinitions>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
   
   
   
@@ -607,26 +608,26 @@ processGtfs <- function(n_df,
 <!DOCTYPE transitSchedule SYSTEM \"http://www.matsim.org/files/dtd/transitSchedule_v1.dtd\">
 <transitSchedule>
   <transitStops>\n",
-    file="./data/transitSchedule.xml",append=FALSE)
+    file=paste0(outputLocation,"transitSchedule.xml"),append=FALSE)
   
   for (i in 1:nrow(transitStops)) {
     # for (i in 1:100) {
     cat(paste0("    <stopFacility id=\"",transitStops[i,]$stop_id,"\" isBlocking=\"false\" linkRefId=\"",
                transitStops[i,]$linkRefId,"\" x=\"",transitStops[i,]$x,"\" y=\"",
-               transitStops[i,]$y,"\"/>\n"),file="./data/transitSchedule.xml",append=TRUE)
+               transitStops[i,]$y,"\"/>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
   }
-  cat(paste0("  </transitStops>\n"),file="./data/transitSchedule.xml",append=TRUE)
-  cat(paste0("  <transitLine id=\"Melbourne\">\n"),file="./data/transitSchedule.xml",append=TRUE)
+  cat(paste0("  </transitStops>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+  cat(paste0("  <transitLine id=\"Melbourne\">\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
   
   # TODO Ask @Alan to check this part:
   # for (i in 1:nrow(vehicleTripMatching)) {
   for (i in 1:100) {
     routeProfileCurrent <- routeProfile%>%filter(trip_id==vehicleTripMatching[i,]$trip_id) 
     if(nrow(routeProfileCurrent)>0){ # I added this to drop those empty route profiles
-      cat(paste0("    <transitRoute id=\"",vehicleTripMatching[i,]$trip_id,"\">\n"),file="./data/transitSchedule.xml",append=TRUE)
-      cat(paste0("      <description>",vehicleTripMatching[i,]$service_id,"</description>\n"),file="./data/transitSchedule.xml",append=TRUE)
-      cat(paste0("      <transportMode>",vehicleTripMatching[i,]$service_type,"</transportMode>\n"),file="./data/transitSchedule.xml",append=TRUE)
-      cat(paste0("      <routeProfile>\n"),file="./data/transitSchedule.xml",append=TRUE)
+      cat(paste0("    <transitRoute id=\"",vehicleTripMatching[i,]$trip_id,"\">\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+      cat(paste0("      <description>",vehicleTripMatching[i,]$service_id,"</description>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+      cat(paste0("      <transportMode>",vehicleTripMatching[i,]$service_type,"</transportMode>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+      cat(paste0("      <routeProfile>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
       
       for (j in 1:nrow(routeProfileCurrent)) {
         cat(paste0("        <stop arrivalOffset=\"",
@@ -635,18 +636,18 @@ processGtfs <- function(n_df,
                    routeProfileCurrent[j,]$departureOffset,
                    "\" refId=\"",
                    routeProfileCurrent[j,]$refId,
-                   "\"/>\n"),file="./data/transitSchedule.xml",append=TRUE)
+                   "\"/>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
       }
-      cat(paste0("      </routeProfile>\n"),file="./data/transitSchedule.xml",append=TRUE)
-      cat(paste0("      <route>\n"),file="./data/transitSchedule.xml",append=TRUE)
+      cat(paste0("      </routeProfile>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+      cat(paste0("      <route>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
       for (j in 1:nrow(routeProfileCurrent)) {
         cat(paste0("        <link refId=\"",
                    paste0(routeProfileCurrent[j,]$from_id,"_",routeProfileCurrent[j,]$to_id),
-                   "\"/>\n"),file="./data/transitSchedule.xml",append=TRUE)
+                   "\"/>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
       }
-      cat(paste0("      </route>\n"),file="./data/transitSchedule.xml",append=TRUE)
+      cat(paste0("      </route>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
       
-      cat(paste0("      <departures>\n"),file="./data/transitSchedule.xml",append=TRUE)
+      cat(paste0("      <departures>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
       departuresCurrent <- departures%>%filter(vehicleRefId==vehicleTripMatching[j,]$trip_id)
       for (k in 1:nrow(departuresCurrent)) {
         cat(paste0("        <departure departureTime=\"",
@@ -655,15 +656,15 @@ processGtfs <- function(n_df,
                    departuresCurrent[k,]$id,
                    "\" vehicleRefId=\"",
                    departuresCurrent[k,]$vehicleRefId,
-                   "\"/>\n"),file="./data/transitSchedule.xml",append=TRUE)
+                   "\"/>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
       }   
-      cat(paste0("      </departures>\n"),file="./data/transitSchedule.xml",append=TRUE)
-      cat(paste0("    </transitRoute>\n"),file="./data/transitSchedule.xml",append=TRUE)
+      cat(paste0("      </departures>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+      cat(paste0("    </transitRoute>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
     }
 
   }
-  cat(paste0("  </transitLine>\n"),file="./data/transitSchedule.xml",append=TRUE)
-  cat(paste0("</transitSchedule>\n"),file="./data/transitSchedule.xml",append=TRUE)
+  cat(paste0("  </transitLine>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+  cat(paste0("</transitSchedule>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
   
   
   
