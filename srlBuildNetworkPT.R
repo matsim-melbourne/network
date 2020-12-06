@@ -16,6 +16,7 @@ source('./functions/etc/logging.R')
 source('./functions/gtfs2PtNetwork.R')
 source('./functions/exportSQlite.R')
 source('./functions/exportXML.R')
+source('./functions/srl2PtNetwork.R') 
 
 # studyRegion <- st_read('/home/alan/Projects/virtual-population/data/absRegionsReprojected.sqlite',
 #                        layer="gccsa_2016_aust",quiet=T)
@@ -97,13 +98,9 @@ exportSQlite(list(nodes,edgesCombined), outputFileName = "networkBase")
 
 # incorporating SRL -------------------------------------------------------
 
-#===============Code added by Steve starts here================================
 # requires file 'srl_stg1.sqlite', in EPSG:28355 - GDA 94 / MGA zone 55, containing two layers:
 #  - stations (point), with a 'sequence' field listing order of stations along line from one end to other
 #  - lines (linestring), containing separate line features each joining two adjacent stations 
-
-# function
-source('./functions/srl2PtNetwork.R')  ##SP note: to be moved to top
 
 # read in SRL stations and lines
 stations <- st_read("data/srl_stg1.sqlite",layer="stations")
@@ -152,7 +149,6 @@ stopTimes <- bind_rows(stopTimes, srlStopTimes)
 trips <- bind_rows(trips, srlTrips)
 routes <- bind_rows(routes, srlRoutes)
 
-#===============Code added by Steve ends here==================================
 
 
 # combining SRL and road network ------------------------------------------
