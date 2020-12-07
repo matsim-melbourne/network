@@ -334,7 +334,7 @@ exportGtfsSchedule <- function(outputLocation,
       cat(paste0("      </route>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
       
       cat(paste0("      <departures>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
-      departuresCurrent <- departures%>%filter(vehicleRefId==vehicleTripMatching[j,]$trip_id)
+      departuresCurrent <- departures%>%filter(vehicleRefId==vehicleTripMatching[i,]$trip_id)
       for (k in 1:nrow(departuresCurrent)) {
         cat(paste0("        <departure departureTime=\"",
                    departuresCurrent[k,]$departureTime,
