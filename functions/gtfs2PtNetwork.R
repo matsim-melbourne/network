@@ -121,7 +121,7 @@ processGtfs <- function(outputLocation="./test/",
     group_by(trip_id) %>%
     # when we use the snapped locations, two sequential stops may be at the same
     # location. If this is the case, we remove the later stop.
-    filter(id!=lag(id)) %>%
+    filter(id!=lag(id) | row_number()==1) %>%
     mutate(stop_sequence=row_number()) %>%
     ungroup() %>%
     dplyr::select(trip_id,stop_sequence,arrival_time,departure_time,stop_id,id,x,y)
@@ -173,7 +173,6 @@ exportGtfsSchedule <- function(outputLocation,
     mutate(to_id=lead(from_id),
            to_x=lead(from_x),
            to_y=lead(from_y)) %>%
-    filter(!is.na(to_id)) %>% 
     ungroup() %>%
     mutate(arrivalOffset=as.character(as_hms(arrivalOffset)),
            departureOffset=as.character(as_hms(departureOffset)),
@@ -194,6 +193,7 @@ exportGtfsSchedule <- function(outputLocation,
   ptNetworkDistinctEdges <- ptNetwork %>%
     dplyr::select(from_id,to_id,from_x,from_y,to_x,to_y) %>%
     distinct() %>%
+    filter(!is.na(to_id)) %>% 
     mutate(GEOMETRY=paste0("LINESTRING(",from_x," ",from_y,",",to_x," ",to_y,")")) %>%
     st_as_sf(wkt = "GEOMETRY", crs = 28355)
   
@@ -291,9 +291,9 @@ exportGtfsSchedule <- function(outputLocation,
   # transitSchedule
   cat(
     "<?xml version=\"1.0\" ?>
-<!DOCTYPE transitSchedule SYSTEM \"http://www.matsim.org/files/dtd/transitSchedule_v1.dtd\">
-<transitSchedule>
-  <transitStops>\n",
+    <!DOCTYPE transitSchedule SYSTEM \"http://www.matsim.org/files/dtd/transitSchedule_v1.dtd\">
+    <transitSchedule>
+    <transitStops>\n",
     file=paste0(outputLocation,"transitSchedule.xml"),append=FALSE)
   
   for (i in 1:nrow(transitStops)) {
@@ -307,7 +307,7 @@ exportGtfsSchedule <- function(outputLocation,
   
   # TODO Ask @Alan to check this part:
   for (i in 1:nrow(vehicleTripMatching)) {
-  # for (i in 1:100) {
+    # for (i in 1:100) {
     routeProfileCurrent <- routeProfile%>%filter(trip_id==vehicleTripMatching[i,]$trip_id) 
     if(nrow(routeProfileCurrent)>0){ # I added this to drop those empty route profiles
       cat(paste0("    <transitRoute id=\"",vehicleTripMatching[i,]$trip_id,"\">\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
@@ -315,14 +315,30 @@ exportGtfsSchedule <- function(outputLocation,
       cat(paste0("      <transportMode>",vehicleTripMatching[i,]$service_type,"</transportMode>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
       cat(paste0("      <routeProfile>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
       
-      for (j in 1:nrow(routeProfileCurrent)) {
-        cat(paste0("        <stop arrivalOffset=\"",
-                   routeProfileCurrent[j,]$arrivalOffset,
-                   "\" awaitDeparture=\"true\" departureOffset=\"",
-                   routeProfileCurrent[j,]$departureOffset,
-                   "\" refId=\"",
-                   routeProfileCurrent[j,]$refId,
-                   "\"/>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+      for (j in 1:nrow(routeProfileCurrent)) { 
+        # first row: no arrival offset
+        if (j == 1) cat(paste0("        <stop awaitDeparture=\"true\" departureOffset=\"",
+                               routeProfileCurrent[j,]$departureOffset,
+                               "\" refId=\"",
+                               routeProfileCurrent[j,]$refId,
+                               "\"/>\n"), 
+                        file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+        # rows except first and last
+        else if (j < nrow(routeProfileCurrent)) cat(paste0("        <stop arrivalOffset=\"",
+                                                           routeProfileCurrent[j,]$arrivalOffset,
+                                                           "\" awaitDeparture=\"true\" departureOffset=\"",
+                                                           routeProfileCurrent[j,]$departureOffset,
+                                                           "\" refId=\"",
+                                                           routeProfileCurrent[j,]$refId,
+                                                           "\"/>\n"),
+                                                    file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+        # last row: no departure offset
+        else cat(paste0("        <stop arrivalOffset=\"",
+                        routeProfileCurrent[j,]$arrivalOffset,
+                        "\" refId=\"",
+                        routeProfileCurrent[j,]$refId,
+                        "\"/>\n"),
+                 file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
       }
       cat(paste0("      </routeProfile>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
       cat(paste0("      <route>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
@@ -346,7 +362,7 @@ exportGtfsSchedule <- function(outputLocation,
       }   
       cat(paste0("      </departures>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
       cat(paste0("    </transitRoute>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
-  s  }
+    }
     
   }
   cat(paste0("  </transitLine>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
