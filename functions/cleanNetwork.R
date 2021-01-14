@@ -60,8 +60,8 @@ removeBadModes <- function(df,mode,bad_nodes) {
     # delete mode from offending link. Example: gsub('walk,|walk|,walk', '', 'car,bike,walk')
     mutate(modes=ifelse(delete==T,gsub(paste0(mode,',|',mode,'|,',mode), '', modes),modes)) %>%
     # want to set is_walk/is_mode/is_car to the correct value too
-    mutate(is_walk=ifelse(mode=='walk'&delete==T,0,is_car)) %>%
-    mutate(is_bike=ifelse(mode=='bike'&delete==T,0,is_car)) %>%
+    mutate(is_walk=ifelse(mode=='walk'&delete==T,0,is_walk)) %>%
+    mutate(is_cycle=ifelse(mode=='bike'&delete==T,0,is_cycle)) %>%
     mutate(is_car=ifelse(mode=='car'&delete==T,0,is_car)) %>%
     dplyr::select(-delete) %>%
     # if we have removed all possible modes from a link, delete it.
