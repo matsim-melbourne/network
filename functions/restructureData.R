@@ -49,12 +49,12 @@ restructureData <- function(networkDirect, highway_lookup, defaults_df){
   # no_lane/no_cycling = 0
   
   links <- links %>%  
-    st_drop_geometry() %>%
+    # st_drop_geometry() %>%
     left_join(highway_lookup, by="highway_order") %>%  # Adding back the highway tags 
     mutate(capacity=laneCapacity*permlanes) %>% # capacity for all lanes
     mutate(modes=ifelse(                is_car==1,                          "car",    NA)) %>%
-    mutate(modes=ifelse(!is.na(modes)&is_cycle==1, paste(modes,"bicycle",sep=","), modes)) %>%
-    mutate(modes=ifelse( is.na(modes)&is_cycle==1,                      "bicycle", modes)) %>%
+    mutate(modes=ifelse(!is.na(modes)&is_cycle==1,    paste(modes,"bike",sep=","), modes)) %>%
+    mutate(modes=ifelse( is.na(modes)&is_cycle==1,                         "bike", modes)) %>%
     mutate(modes=ifelse( !is.na(modes)&is_walk==1,    paste(modes,"walk",sep=","), modes)) %>%
     mutate(modes=ifelse(  is.na(modes)&is_walk==1,                         "walk", modes)) %>%
     # convert cycleway from numbers to text

@@ -7,8 +7,8 @@ addGtfsLinks <- function(outputLocation="./test/",
                          analysis_end = as.Date("2019-10-17","%Y-%m-%d"),
                          studyRegion=NA){
   # outputLocation="./gtfs/"
-  # nodes=networkRestructured[[1]]
-  # links=networkRestructured[[2]]
+  # nodes=networkDirected[[1]]
+  # links=networkDirected[[2]]
   # gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip"
   # analysis_start = as.Date("2019-10-11","%Y-%m-%d")
   # analysis_end = as.Date("2019-10-17","%Y-%m-%d")
@@ -223,8 +223,8 @@ exportGtfsSchedule <- function(outputLocation,
     dplyr::select(from_id,to_id,from_x,from_y,to_x,to_y) %>%
     distinct() %>%
     filter(!is.na(to_id)) %>% 
-    mutate(GEOMETRY=paste0("LINESTRING(",from_x," ",from_y,",",to_x," ",to_y,")")) %>%
-    st_as_sf(wkt = "GEOMETRY", crs = 28355)
+    mutate(geom=paste0("LINESTRING(",from_x," ",from_y,",",to_x," ",to_y,")")) %>%
+    st_as_sf(wkt = "geom", crs = 28355)
   
   # ptNetworkGeom <- ptNetwork %>%
   #   dplyr::select(service_type,from_id,to_id,from_x,from_y,to_x,to_y) %>%

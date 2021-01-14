@@ -2,14 +2,8 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
                             addGtfs=F, addIvabmPt=F, writeXml=F, writeSqlite=T,
                             networkSqlite="data/network.sqlite"){
 
-    # crop2TestArea=F
-    # shortLinkLength=20
-    # addElevation=F
-    # addGtfs=F
-    # addIvabmPt=F
-    # writeXml=F
-    # writeSqlite=T
-    # networkSqlite="data/network.sqlite"
+    # crop2TestArea=F; shortLinkLength=20; addElevation=F; addGtfs=F
+    # addIvabmPt=F; writeXml=F; writeSqlite=T; networkSqlite="data/network.sqlite"
     
     message("========================================================")
     message("                **Network Generation Setting**")
@@ -75,6 +69,14 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   # Note: writing logical fields to sqlite is a bad idea, so switching to integers
     networkInput <- list(st_read(networkSqlite,layer="nodes",quiet=T),
                          st_read(networkSqlite,layer="edges",quiet=T))
+    
+    # We run into trouble if the geometry column is 'geom' instead of 'GEOMETRY'
+    if('GEOMETRY'%in%colnames(networkInput[[1]])) {
+      networkInput[[1]]<-networkInput[[1]]%>%rename(geom=GEOMETRY)
+    }
+    if('GEOMETRY'%in%colnames(networkInput[[2]])) {
+      networkInput[[2]]<-networkInput[[2]]%>%rename(geom=GEOMETRY)
+    }
   
   cat(paste0("Network input, nodes:\n"))
   str(networkInput[[1]])
@@ -85,9 +87,22 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   
   # select from https://github.com/JamesChevalier/cities/tree/master/australia/victoria
   if(crop2TestArea)system.time(networkInput <- crop2Poly(networkInput,
-                                                         "city-of-melbourne_victoria"))  
+                                                         "city-of-melbourne_victoria"))
+  # if(crop2TestArea) {
+  #   nodes2 <- networkInput[[1]] %>%
+  #     filter(lengths(st_intersects(., studyRegion,prepared=TRUE,sparse=TRUE)) > 0) 
+  #   edges2 <- networkInput[[2]] %>%
+  #     filter(from_id%in%nodes2$id & to_id%in%nodes2$id)
+  #   nodes2 <- nodes2 %>%
+  #     filter(id%in%edges2$from_id | id%in%edges2$to_id)
+  #   networkInput[[1]] <- nodes2
+  #   networkInput[[2]] <- edges2
+  #   rm(nodes2,edges2)
+  # }
   
-  osm_metadata <- st_read(networkSqlite,layer="osm_metadata",quiet=T)
+  
+  osm_metadata <- st_read(networkSqlite,layer="osm_metadata",quiet=T) %>%
+    filter(osm_id%in%networkInput[[2]]$osm_id)
   defaults_df <- buildDefaultsDF()
   highway_lookup <- defaults_df %>% dplyr::select(highway, highway_order)
   system.time( osmAttributes <- processOsmTags(osm_metadata,defaults_df))
@@ -156,23 +171,30 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   # add mode to edges, add type to nodes, change cycleway from numbers to text
   networkRestructured <- restructureData(networkDirect, highway_lookup,defaults_df)
 
-  if(addElevation) system.time(networkRestructured[[1]] <- addElevation2Nodes(networkRestructured[[1]], 
-                                                                        'data/DEMx10EPSG28355.tif'))
+  # ensure transport is a directed routeable graph by first removing disconnected
+  # directed links, and then ensuring the subgraph for each mode is connected
+  networkNonDisconnected <- removeDisconnectedLinks(networkRestructured,'car,bike')
+  networkConnected <- cleanNetworkSubgraphDirected(networkNonDisconnected,'walk,car,bike')
+  
+  if(addElevation) system.time(networkConnected[[1]] <- addElevation2Nodes(networkConnected[[1]], 
+                                                                           'data/DEMx10EPSG28355.tif'))
   if(addGtfs) {
     # read in the study region boundary
     greaterMelbourne <- st_read("data/studyRegion.sqlite",quiet=T) %>%
       st_buffer(10000) %>%
       st_snap_to_grid(1)
-    system.time(networkRestructured[[2]] <- addGtfsLinks(outputLocation="./gtfs/",
-                                                         nodes=networkRestructured[[1]], 
-                                                         links=networkRestructured[[2]],
-                                                         studyRegion=greaterMelbourne)) 
+    system.time(networkConnected[[2]] <- addGtfsLinks(outputLocation="./gtfs/",
+                                                      nodes=networkConnected[[1]], 
+                                                      links=networkConnected[[2]],
+                                                      studyRegion=greaterMelbourne)) 
   }
-  if(addIvabmPt) system.time(networkRestructured <- integrateIVABM(st_drop_geometry(networkRestructured[[1]]), 
-                                                                   networkRestructured[[2]]))
+  if(addIvabmPt) system.time(networkConnected <- integrateIVABM(st_drop_geometry(networkConnected[[1]]), 
+                                                                networkConnected[[2]]))
   
-  system.time(networkFinal <- cleanNetwork(networkRestructured, 
-                                           network_modes="")) # leave the network_modes empty if not needed
+  # This step is no longer necessary
+  # system.time(networkFinal <- cleanNetwork(networkRestructured, 
+  #                                          network_modes="")) # leave the network_modes empty if not needed
+  networkFinal <- networkConnected
   
   # writing outputs ---------------------------------------------------------
   message("========================================================")

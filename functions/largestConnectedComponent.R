@@ -17,11 +17,14 @@ largestConnectedComponent <- function(n_df,l_df){
     base::unique()
   
   n_df_filtered <- n_df %>%
-    filter(id%in%nodes_in_largest_component) %>%
-    dplyr::select(id,is_roundabout,is_signal)
+    filter(id%in%nodes_in_largest_component) 
+  # %>%
+  #   dplyr::select(id,is_roundabout,is_signal)
   
   l_df_filtered <- l_df %>%
     filter(from_id%in%nodes_in_largest_component & to_id%in%nodes_in_largest_component)
   
   return(list(n_df_filtered,l_df_filtered))
 }
+
+
