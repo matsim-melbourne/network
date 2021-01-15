@@ -174,7 +174,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   # ensure transport is a directed routeable graph by first removing disconnected
   # directed links, and then ensuring the subgraph for each mode is connected
   networkNonDisconnected <- removeDisconnectedLinks(networkRestructured,'car,bike')
-  networkConnected <- cleanNetworkSubgraphDirected(networkNonDisconnected,'walk,car,bike')
+  networkConnected <- cleanNetworkSubgraph(networkNonDisconnected,'walk,car,bike')
   
   if(addElevation) system.time(networkConnected[[1]] <- addElevation2Nodes(networkConnected[[1]], 
                                                                            'data/DEMx10EPSG28355.tif'))
