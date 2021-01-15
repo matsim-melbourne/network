@@ -1,21 +1,21 @@
 makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F, 
-                            addGtfs=F, addIvabmPt=F, writeXml=F, writeSqlite=T,
+                            addGtfs=F, writeXml=F, writeShp=F, writeSqlite=T,
                             networkSqlite="data/network.sqlite"){
 
     # crop2TestArea=F; shortLinkLength=20; addElevation=F; addGtfs=F
-    # addIvabmPt=F; writeXml=F; writeSqlite=T; networkSqlite="data/network.sqlite"
+    # writeXml=F; writeShp=F; writeSqlite=T; networkSqlite="data/network.sqlite"
     
     message("========================================================")
     message("                **Network Generation Setting**")
     message("--------------------------------------------------------")
     message(paste0("- Cropping to a test area:                        ",crop2TestArea))
-   #message(paste0("- Detailed network only in the focus area:        ", focus_area_flag))
     message(paste0("- Shortest link length in network simplification: ", shortLinkLength))
     message(paste0("- Adding elevation:                               ", addElevation))
     message(paste0("- Adding PT from GTFS:                            ", addGtfs))
-    message(paste0("- Adding PT from IV-ABM:                          ", addIvabmPt))
-    message(paste0("- Writing outputs in MATSim XML format:           ", writeXml))
     message(paste0("- Writing outputs in SQLite format:               ", writeSqlite))
+    message(paste0("- Writing outputs in ShapeFile format:            ", writeShp))
+    message(paste0("- Writing outputs in MATSim XML format:           ", writeXml))
+    message(paste0("- Writing outputs in MATSim XML format:           ", writeXml))
     message("========================================================")
   #libraries
   library(sf)
@@ -25,7 +25,6 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   library(stringr)
   library(igraph)
   library(raster)
-  library(XML)
   library(rgdal)
   library(purrr)
   # These are needed if addGtfs=T
@@ -35,14 +34,9 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
     library(lwgeom)
     library(hms)
   }
-  # This is needed if addIvabmPt=T
-  if(addIvabmPt){
-    library(nngeo)
-  }
   
   #functions
   source('./functions/etc/logging.R')
-  # source('./functions/simplifyNetwork.R')
   source('./functions/crop2TestArea.R')
   source('./functions/buildDefaultsDF.R')
   source('./functions/processOsmTags.R')
@@ -56,10 +50,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   source('./functions/restructureData.R')
   source('./functions/addElevation2Nodes.R')
   source('./functions/gtfs2PtNetwork.R')
-  source('./functions/etc/IVABMIntegrator.R')
-  source('./functions/cleanNetwork.R')
-  source('./functions/exportSQlite.R')
-  source('./functions/exportXML.R')
+  source('./functions/writeOutputs.R')
     
   
   message("========================================================")
@@ -88,18 +79,6 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   # select from https://github.com/JamesChevalier/cities/tree/master/australia/victoria
   if(crop2TestArea)system.time(networkInput <- crop2Poly(networkInput,
                                                          "city-of-melbourne_victoria"))
-  # if(crop2TestArea) {
-  #   nodes2 <- networkInput[[1]] %>%
-  #     filter(lengths(st_intersects(., studyRegion,prepared=TRUE,sparse=TRUE)) > 0) 
-  #   edges2 <- networkInput[[2]] %>%
-  #     filter(from_id%in%nodes2$id & to_id%in%nodes2$id)
-  #   nodes2 <- nodes2 %>%
-  #     filter(id%in%edges2$from_id | id%in%edges2$to_id)
-  #   networkInput[[1]] <- nodes2
-  #   networkInput[[2]] <- edges2
-  #   rm(nodes2,edges2)
-  # }
-  
   
   osm_metadata <- st_read(networkSqlite,layer="osm_metadata",quiet=T) %>%
     filter(osm_id%in%networkInput[[2]]$osm_id)
@@ -127,7 +106,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   # simplify intersections while preserving attributes and original geometry.
   system.time(intersectionsSimplified <- simplifyIntersections(largestComponent[[1]],
                                                                largestComponent[[2]],
-                                                               20))
+                                                               shortLinkLength))
   
   # Merge edges going between the same two nodes, picking the shortest geometry.
   # * One-way edges going in the same direction will be merged
@@ -188,12 +167,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
                                                       links=networkConnected[[2]],
                                                       studyRegion=greaterMelbourne)) 
   }
-  if(addIvabmPt) system.time(networkConnected <- integrateIVABM(st_drop_geometry(networkConnected[[1]]), 
-                                                                networkConnected[[2]]))
-  
-  # This step is no longer necessary
-  # system.time(networkFinal <- cleanNetwork(networkRestructured, 
-  #                                          network_modes="")) # leave the network_modes empty if not needed
+ 
   networkFinal <- networkConnected
   
   # writing outputs ---------------------------------------------------------
@@ -202,6 +176,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   message("--------------------------------------------------------")
 
   if(writeSqlite) system.time(exportSQlite(networkFinal, outputFileName = "MATSimMelbNetwork"))
+  if(T) system.time(exportShp(networkFinal, outputFileName = "MATSimMelbNetwork"))
   if(writeXml) system.time(exportXML(networkFinal, outputFileName = "MATSimMelbNetwork")) # uncomment if you want xml output
 }
 
