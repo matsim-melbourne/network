@@ -15,7 +15,6 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
     message(paste0("- Writing outputs in SQLite format:               ", writeSqlite))
     message(paste0("- Writing outputs in ShapeFile format:            ", writeShp))
     message(paste0("- Writing outputs in MATSim XML format:           ", writeXml))
-    message(paste0("- Writing outputs in MATSim XML format:           ", writeXml))
     message("========================================================")
   #libraries
   library(sf)
@@ -38,6 +37,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   #functions
   source('./functions/etc/logging.R')
   source('./functions/crop2TestArea.R')
+  source('./functions/cleanNetwork.R')
   source('./functions/buildDefaultsDF.R')
   source('./functions/processOsmTags.R')
   source('./functions/largestConnectedComponent.R')
