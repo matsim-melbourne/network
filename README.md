@@ -39,7 +39,7 @@ cd data && ./prepare.sh -melb -net
 
 Make sure to have the `newtork.sqlite` and `melbourne.sqlite` files from the previous step, in the data folder before starting this step.
 
-MATSim network generation code is written in R programming language and a working knowledge of R is expected. 
+MATSim network generation code is written in R programming language and a working knowledge of R is expected.
 All required R packages must be installed before running the algorithm. `packrat` will take of that for you and you just need to run the following in R to install the packages:
 ```
 install.packages("packrat")
@@ -59,8 +59,8 @@ MATSim network generation algorithm is a designed to be configurable depending o
 | -s       | simplifying the network, minimum link length=20m                                  |
 | -z       | Adding elevation (requires the elevation data)                                    |
 | -pt      | Adding pt from GTFS (requires the GTFS data)                                      |
-| -ivabm   | Adding pt from IVABM (requires the IVABM network)                                 |
 | -xml     | Writing the output network in MATSim readable XML format                          |
+| -shp     | Writing the output network in ESRI Shapefile format                               |
 | -sqlite  | Writing the output network in SQLite format                                       |
 
 **Note** Make sure to **at least specify one output format** for the `makeNetwork.sh`. For example, the minimum command for creating a MATSim readable output would be:
