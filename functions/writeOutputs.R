@@ -188,7 +188,8 @@ exportXML <- function(networkFinal, outputFileName = "outputXML"){
   links <- links %>%
     mutate(id = replace(id, is.na(id), row_number())) %>% 
     mutate(type = replace(highway, is.na(highway), "NotSpecified")) %>% 
-    mutate(cycleway = replace(cycleway, is.na(cycleway),"No")) 
+    mutate(cycleway = replace(cycleway, is.na(cycleway),"No")) %>% 
+    mutate(bicycleInfrastructureSpeedFactor = 1) 
   # Adding links
   echo('\n')
   echo('Starting to add links to XML\n')
