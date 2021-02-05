@@ -1,33 +1,84 @@
 # networkAttributed=networkDirect
-restructureData <- function(networkDirect, highway_lookup, defaults_df){
+restructureData <- function(networkDirect, highway_lookup, 
+                            defaults_df, addStrava){
   
   nodes <- networkDirect[[1]]
   links <- networkDirect[[2]]
   
-  links <- links %>% 
-    mutate(uid=row_number()) 
-  # finding merged bikepath ids
-  bikepath_uids <- links %>% 
-    st_drop_geometry() %>% 
-    filter(cycleway=="4" & highway_order<15) %>% 
-    dplyr::select(uid) %>% unlist() %>%  as.double()
-  # changing merged bikepaths to regular bikepaths
-  bikepaths <- links %>% 
-    filter(uid %in% bikepath_uids) %>% 
-    mutate(highway_order=15) %>% 
-    mutate(freespeed=defaults_df$freespeed[15]) %>% 
-    mutate(laneCapacity=defaults_df$laneCapacity[15]) %>% 
-    mutate(is_car=0) %>% 
-    mutate(permlanes=1) %>% # bikepaths are assumed sinlge lane
-    mutate(is_oneway=0) %>% # bikepaths are assumed bi-directional 
-    dplyr::select(-uid)
-  # merging changed bikepaths back with rest of the links
-  links <- links %>% 
-    mutate(cycleway=ifelse(uid %in% bikepath_uids,0,cycleway)) %>% # removing bikepaths from those that had it merged 
-    mutate(is_cycle=ifelse(highway_order%in%c(1,8,2,9),0,is_cycle)) %>% # removing bikepaths from those that had it merged 
-    dplyr::select(-uid) %>% 
-    rbind(bikepaths)
-
+  if(!addStrava){
+    
+    links <- links %>% 
+      mutate(uid=row_number()) 
+    # finding merged bikepath ids
+    bikepath_uids <- links %>% 
+      st_drop_geometry() %>% 
+      filter(cycleway=="4" & highway_order<15) %>% 
+      dplyr::select(uid) %>% unlist() %>%  as.double()
+    # changing merged bikepaths to regular bikepaths
+    bikepaths <- links %>% 
+      filter(uid %in% bikepath_uids) %>% 
+      mutate(highway_order=15) %>% 
+      mutate(freespeed=defaults_df$freespeed[15]) %>% 
+      mutate(laneCapacity=defaults_df$laneCapacity[15]) %>% 
+      mutate(is_car=0) %>% 
+      mutate(permlanes=1) %>% # bikepaths are assumed sinlge lane
+      mutate(is_oneway=0) %>% # bikepaths are assumed bi-directional 
+      dplyr::select(-uid)
+    # merging changed bikepaths back with rest of the links
+    links <- links %>% 
+      mutate(cycleway=ifelse(uid %in% bikepath_uids,0,cycleway)) %>% # removing bikepaths from those that had it merged 
+      mutate(is_cycle=ifelse(highway_order%in%c(1,8,2,9),0,is_cycle)) %>% # removing bikepaths from those that had it merged 
+      dplyr::select(-uid) %>% 
+      rbind(bikepaths)
+    
+    
+    # Bike hierarchy:
+    # bikepath           = 4
+    # seperated_lane     = 3
+    # lane               = 2
+    # shared_lane        = 1
+    # no_lane/no_cycling = 0
+    
+    links <- links %>%  
+      # st_drop_geometry() %>%
+      left_join(highway_lookup, by="highway_order") %>%  # Adding back the highway tags 
+      mutate(capacity=laneCapacity*permlanes) %>% # capacity for all lanes
+      mutate(modes=ifelse(                is_car==1,                          "car",    NA)) %>%
+      mutate(modes=ifelse(!is.na(modes)&is_cycle==1,    paste(modes,"bike",sep=","), modes)) %>%
+      mutate(modes=ifelse( is.na(modes)&is_cycle==1,                         "bike", modes)) %>%
+      mutate(modes=ifelse( !is.na(modes)&is_walk==1,    paste(modes,"walk",sep=","), modes)) %>%
+      mutate(modes=ifelse(  is.na(modes)&is_walk==1,                         "walk", modes)) %>%
+      # convert cycleway from numbers to text
+      mutate(cycleway=ifelse(cycleway==4, "bikepath"      , cycleway)) %>%
+      mutate(cycleway=ifelse(cycleway==3, "seperated_lane", cycleway)) %>%
+      mutate(cycleway=ifelse(cycleway==2, "lane"          , cycleway)) %>%
+      mutate(cycleway=ifelse(cycleway==1, "shared_lane"   , cycleway)) %>%
+      mutate(cycleway=ifelse(cycleway==0, NA              , cycleway)) %>%
+      dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
+                    permlanes, capacity, highway, is_oneway, cycleway, is_cycle, is_walk,
+                    is_car, modes)
+    
+  }else{
+    links <- links %>%  
+      # st_drop_geometry() %>%
+      mutate(capacity=laneCapacity*permlanes) %>% # capacity for all lanes
+      mutate(modes=ifelse(                is_car==1,                          "car",    NA)) %>%
+      mutate(modes=ifelse(!is.na(modes)&is_cycle==1,    paste(modes,"bike",sep=","), modes)) %>%
+      mutate(modes=ifelse( is.na(modes)&is_cycle==1,                         "bike", modes)) %>%
+      mutate(modes=ifelse( !is.na(modes)&is_walk==1,    paste(modes,"walk",sep=","), modes)) %>%
+      mutate(modes=ifelse(  is.na(modes)&is_walk==1,                         "walk", modes)) %>%
+      # convert cycleway from numbers to text
+      mutate(cycleway=ifelse(cycleway==4, "bikepath"      , cycleway)) %>%
+      mutate(cycleway=ifelse(cycleway==3, "seperated_lane", cycleway)) %>%
+      mutate(cycleway=ifelse(cycleway==2, "lane"          , cycleway)) %>%
+      mutate(cycleway=ifelse(cycleway==1, "shared_lane"   , cycleway)) %>%
+      mutate(cycleway=ifelse(cycleway==0, NA              , cycleway)) %>%
+      dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
+                    permlanes, capacity, highway, is_oneway, cycleway, is_cycle, 
+                    is_walk,is_car, modes, rvs_people,rvs_trips,rvs_avg_kmh,
+                    fwd_avg_kmh,fwd_people,fwd_trips)
+  }
+  
   nodes <- nodes %>% # Changing to MATSim expected format
     mutate(x = as.numeric(sf::st_coordinates(.)[,1]),
            y = as.numeric(sf::st_coordinates(.)[,2])) %>% 
@@ -39,33 +90,8 @@ restructureData <- function(networkDirect, highway_lookup, defaults_df){
                                         true = "signalised_intersection",
                                         false = "simple_intersection"))) %>% 
     dplyr::select(id, x, y, type, geom) %>% 
-    distinct(id, .keep_all=T)
-  
-  # Bike hierarchy:
-  # bikepath           = 4
-  # seperated_lane     = 3
-  # lane               = 2
-  # shared_lane        = 1
-  # no_lane/no_cycling = 0
-  
-  links <- links %>%  
-    # st_drop_geometry() %>%
-    left_join(highway_lookup, by="highway_order") %>%  # Adding back the highway tags 
-    mutate(capacity=laneCapacity*permlanes) %>% # capacity for all lanes
-    mutate(modes=ifelse(                is_car==1,                          "car",    NA)) %>%
-    mutate(modes=ifelse(!is.na(modes)&is_cycle==1,    paste(modes,"bike",sep=","), modes)) %>%
-    mutate(modes=ifelse( is.na(modes)&is_cycle==1,                         "bike", modes)) %>%
-    mutate(modes=ifelse( !is.na(modes)&is_walk==1,    paste(modes,"walk",sep=","), modes)) %>%
-    mutate(modes=ifelse(  is.na(modes)&is_walk==1,                         "walk", modes)) %>%
-    # convert cycleway from numbers to text
-    mutate(cycleway=ifelse(cycleway==4, "bikepath"      , cycleway)) %>%
-    mutate(cycleway=ifelse(cycleway==3, "seperated_lane", cycleway)) %>%
-    mutate(cycleway=ifelse(cycleway==2, "lane"          , cycleway)) %>%
-    mutate(cycleway=ifelse(cycleway==1, "shared_lane"   , cycleway)) %>%
-    mutate(cycleway=ifelse(cycleway==0, NA              , cycleway)) %>%
-    dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
-                  permlanes, capacity, highway, is_oneway, cycleway, is_cycle, is_walk,
-                  is_car, modes)
+    distinct(id, .keep_all=T) 
+
   
   return(list(nodes,links))
 }

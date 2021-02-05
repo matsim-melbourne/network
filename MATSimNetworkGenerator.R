@@ -2,9 +2,10 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
                             addGtfs=F, writeXml=F, writeShp=F, writeSqlite=T,
                             networkSqlite="data/network.sqlite"){
 
-    # crop2TestArea=F; shortLinkLength=20; addElevation=F; addGtfs=F
+    # crop2TestArea=F; shortLinkLength=0.01; addElevation=F; addGtfs=F
     # writeXml=F; writeShp=F; writeSqlite=T; networkSqlite="data/network.sqlite"
-    
+    addStrava=F; 
+    addBikeSpeed = F
     message("========================================================")
     message("                **Network Generation Setting**")
     message("--------------------------------------------------------")
@@ -87,6 +88,14 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   highway_lookup <- defaults_df %>% dplyr::select(highway, highway_order)
   system.time( osmAttributes <- processOsmTags(osm_metadata,defaults_df))
   
+  if(addStrava){
+    strava_meta <- st_read("data/strava_grouped.sqlite", quiet=T)
+    osmAttributes <- osmAttributes %>% 
+      left_join(st_drop_geometry(strava_meta),
+                by=c("osm_id"="osmid")) 
+  }
+  
+  
   edgesAttributed <- networkInput[[2]] %>%
     inner_join(osmAttributes, by="osm_id") %>%
     dplyr::select(-osm_id,highway,highway_order)
@@ -108,50 +117,58 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   system.time(intersectionsSimplified <- simplifyIntersections(largestComponent[[1]],
                                                                largestComponent[[2]],
                                                                shortLinkLength))
+  # Skipping merging if strava data is added - FOR NOW
+  # Also note that restructure data depends on addStrava flag too
+  if(addStrava){
+    edgesCombined3 <- list(intersectionsSimplified[[1]],
+                           intersectionsSimplified[[2]])
+  }else{
+    # Merge edges going between the same two nodes, picking the shortest geometry.
+    # * One-way edges going in the same direction will be merged
+    # * Pairs of one-way edges in opposite directions will be merged into a two-way edge.
+    # * Two-way edges will be merged regardless of direction.
+    # * One-way edges will NOT be merged with two-way edges.
+    # * Non-car edges do NOT count towards the merged lane count (permlanes)
+    system.time(edgesCombined <- combineRedundantEdges(intersectionsSimplified[[1]],
+                                                       intersectionsSimplified[[2]]))
   
-  # Merge edges going between the same two nodes, picking the shortest geometry.
-  # * One-way edges going in the same direction will be merged
-  # * Pairs of one-way edges in opposite directions will be merged into a two-way edge.
-  # * Two-way edges will be merged regardless of direction.
-  # * One-way edges will NOT be merged with two-way edges.
-  # * Non-car edges do NOT count towards the merged lane count (permlanes)
-  system.time(edgesCombined <- combineRedundantEdges(intersectionsSimplified[[1]],
-                                                     intersectionsSimplified[[2]]))
-
-  # Merge one-way and two-way edges going between the same two nodes. In these 
-  # cases, the merged attributes will be two-way.
-  # This guarantees that there will only be a single edge between any two nodes.
-  system.time(combinedUndirectedAndDirected <- 
-                combineUndirectedAndDirectedEdges(edgesCombined[[1]],
-                                                  edgesCombined[[2]]))
-
-  # If there is a chain of edges between intersections, merge them together
-  system.time(edgesSimplified <- simplifyLines(combinedUndirectedAndDirected[[1]],
-                                               combinedUndirectedAndDirected[[2]]))
+    # Merge one-way and two-way edges going between the same two nodes. In these 
+    # cases, the merged attributes will be two-way.
+    # This guarantees that there will only be a single edge between any two nodes.
+    system.time(combinedUndirectedAndDirected <- 
+                  combineUndirectedAndDirectedEdges(edgesCombined[[1]],
+                                                    edgesCombined[[2]]))
   
-  # Remove dangles
-  system.time(noDangles <- removeDangles(edgesSimplified[[1]],edgesSimplified[[2]],500))
-  
-  # Do a second round of simplification.
-  system.time(edgesCombined2 <- combineRedundantEdges(noDangles[[1]],
-                                                      noDangles[[2]]))
-  system.time(combinedUndirectedAndDirected2 <- 
-                combineUndirectedAndDirectedEdges(edgesCombined2[[1]],
-                                                  edgesCombined2[[2]]))
-  
-  system.time(edgesSimplified2 <- simplifyLines(combinedUndirectedAndDirected2[[1]],
-                                                combinedUndirectedAndDirected2[[2]]))
-  system.time(edgesCombined3 <- combineRedundantEdges(edgesSimplified2[[1]],
-                                                      edgesSimplified2[[2]]))
+    # If there is a chain of edges between intersections, merge them together
+    system.time(edgesSimplified <- simplifyLines(combinedUndirectedAndDirected[[1]],
+                                                 combinedUndirectedAndDirected[[2]]))
+    
+    # Remove dangles
+    system.time(noDangles <- removeDangles(edgesSimplified[[1]],edgesSimplified[[2]],500))
+    
+    # Do a second round of simplification.
+    system.time(edgesCombined2 <- combineRedundantEdges(noDangles[[1]],
+                                                        noDangles[[2]]))
+    system.time(combinedUndirectedAndDirected2 <- 
+                  combineUndirectedAndDirectedEdges(edgesCombined2[[1]],
+                                                    edgesCombined2[[2]]))
+    
+    system.time(edgesSimplified2 <- simplifyLines(combinedUndirectedAndDirected2[[1]],
+                                                  combinedUndirectedAndDirected2[[2]]))
+    system.time(edgesCombined3 <- combineRedundantEdges(edgesSimplified2[[1]],
+                                                        edgesSimplified2[[2]]))
+  }
   # simplify geometry so all edges are straight lines
   system.time(networkDirect <- 
                 makeEdgesDirect(edgesCombined3[[1]],
                                 edgesCombined3[[2]]))
   
   # add mode to edges, add type to nodes, change cycleway from numbers to text
-  networkRestructured <- restructureData(networkDirect, highway_lookup,defaults_df)
+  networkRestructured <- restructureData(networkDirect, highway_lookup,
+                                         defaults_df, addStrava)
   
-  networkRestructured <- addInfraSpeedFactor(networkRestructured[[1]],networkRestructured[[2]])
+  if(addBikeSpeed) networkRestructured <- addInfraSpeedFactor(networkRestructured[[1]],
+                                                              networkRestructured[[2]])
   
   # ensure transport is a directed routeable graph by first removing disconnected
   # directed links, and then ensuring the subgraph for each mode is connected
