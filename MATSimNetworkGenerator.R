@@ -51,6 +51,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   source('./functions/addElevation2Nodes.R')
   source('./functions/gtfs2PtNetwork.R')
   source('./functions/writeOutputs.R')
+  source('./functions/addInfraSpeedFactor.R')
     
   
   message("========================================================")
@@ -149,7 +150,9 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   
   # add mode to edges, add type to nodes, change cycleway from numbers to text
   networkRestructured <- restructureData(networkDirect, highway_lookup,defaults_df)
-
+  
+  networkRestructured <- addInfraSpeedFactor(networkRestructured[[1]],networkRestructured[[2]])
+  
   # ensure transport is a directed routeable graph by first removing disconnected
   # directed links, and then ensuring the subgraph for each mode is connected
   networkNonDisconnected <- removeDisconnectedLinks(networkRestructured,'car,bike')
@@ -167,7 +170,8 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
                                                       links=networkConnected[[2]],
                                                       studyRegion=greaterMelbourne)) 
   }
- 
+
+   
   networkFinal <- networkConnected
   
   # writing outputs ---------------------------------------------------------
