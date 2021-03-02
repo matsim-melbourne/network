@@ -2,10 +2,10 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
                             addGtfs=F, writeXml=F, writeShp=F, writeSqlite=T,
                             networkSqlite="data/network.sqlite"){
 
-    # crop2TestArea=F; shortLinkLength=0.01; addElevation=F; addGtfs=F
-    # writeXml=F; writeShp=F; writeSqlite=T; networkSqlite="data/network.sqlite"
+    crop2TestArea=F; shortLinkLength=0.01; addElevation=F; addGtfs=F
+    writeXml=T; writeShp=F; writeSqlite=T; networkSqlite="data/network.sqlite"
     addStrava=F; 
-    addBikeSpeed = F
+    addBikeSpeed=T
     message("========================================================")
     message("                **Network Generation Setting**")
     message("--------------------------------------------------------")
@@ -191,13 +191,26 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
    
   networkFinal <- networkConnected
   
+  if(addElevation) system.time(networkFinal[[1]] <- addElevation2Nodes(networkFinal[[1]], 
+                                                                       'data/DEMx10EPSG28355.tif'))
+                                                                           
+  
   # writing outputs ---------------------------------------------------------
   message("========================================================")
   message("|               **Launching Output Writing**           |")
   message("--------------------------------------------------------")
-
-  if(writeSqlite) system.time(exportSQlite(networkFinal, outputFileName = "MATSimMelbNetwork"))
-  if(writeShp) system.time(exportShp(networkFinal, outputFileName = "MATSimMelbNetwork"))
-  if(writeXml) system.time(exportXML(networkFinal, outputFileName = "MATSimMelbNetwork")) # uncomment if you want xml output
+  
+  outputFileName= paste0("network_L",shortLinkLength)
+  if(crop2TestArea) outputFileName=paste0(outputFileName,"_testArea")
+  if(addElevation) outputFileName=paste0(outputFileName,"_3D")
+  if(addBikeSpeed) outputFileName=paste0(outputFileName,"_BikeSpeed")
+  if(addBikeSpeed) outputFileName=paste0(outputFileName,"_GTFS")
+  if(addStrava) outputFileName=paste0(outputFileName,"_Strava")
+  
+  outputFileName=paste0(outputFileName,"_", format(Sys.time(),"%d%b%y_%H%M"))
+  
+  if(writeSqlite) system.time(exportSQlite(networkFinal, outputFileName = "outputFileName"))
+  if(writeShp) system.time(exportShp(networkFinal, outputFileName = "outputFileName"))
+  if(writeXml) system.time(exportXML(networkFinal, outputFileName = "outputFileName")) 
 }
 

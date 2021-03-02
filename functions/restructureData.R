@@ -5,6 +5,10 @@ restructureData <- function(networkDirect, highway_lookup,
   nodes <- networkDirect[[1]]
   links <- networkDirect[[2]]
   
+  nodes <- nodes %>% 
+    left_join( st_drop_geometry(links)%>%group_by(to_id)%>%summarise(max_highway=min(highway_order)),
+               by=c("id"="to_id"))  
+  
   if(!addStrava){
     
     links <- links %>% 
@@ -89,7 +93,7 @@ restructureData <- function(networkDirect, highway_lookup,
                         false = if_else(as.logical(is_signal), 
                                         true = "signalised_intersection",
                                         false = "simple_intersection"))) %>% 
-    dplyr::select(id, x, y, type, geom) %>% 
+    dplyr::select(id, x, y, type, max_highway, geom) %>% 
     distinct(id, .keep_all=T) 
 
   

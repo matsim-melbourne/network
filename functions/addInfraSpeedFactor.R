@@ -4,16 +4,16 @@
 
 # 23 km/h is considered as the bicycle speed in both simulation and here
 addInfraSpeedFactor <- function(nodes,links){
-  #links <- networkRestructured[[2]]
-  #nodes <- networkRestructured[[1]]
-   
+  links <- networkRestructured[[2]]
+  nodes <- networkRestructured[[1]]
+  if(!"bicycleSpeedFactor" %in% colnames(links)) links <- mutate(links,bicycleSpeedFactor=1)
   # Making all links single way:
   bi_links <- links %>% 
     filter(is_oneway==0) %>% 
     mutate(is_oneway=1) %>% 
     rename(from_id=to_id, to_id=from_id, toX=fromX, toY=fromY, fromX=toX, fromY=toY) %>% 
     dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, permlanes,
-                  capacity, is_oneway, cycleway, highway, is_cycle, is_walk, is_car, modes,bicycleSpeedFactor)
+                  capacity, is_oneway, cycleway, highway, is_cycle, is_walk, is_car, modes, bicycleSpeedFactor)
   links <- links %>%
     mutate(is_oneway=ifelse(is_oneway==0, yes = 1, no=1)) %>% 
     rbind(bi_links)
