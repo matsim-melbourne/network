@@ -2,10 +2,10 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
                             addGtfs=F, writeXml=F, writeShp=F, writeSqlite=T,
                             networkSqlite="data/network.sqlite"){
 
-    crop2TestArea=F; shortLinkLength=0.01; addElevation=F; addGtfs=F
-    writeXml=T; writeShp=F; writeSqlite=T; networkSqlite="data/network.sqlite"
-    addStrava=F; 
-    addBikeSpeed=T
+    # crop2TestArea=F; shortLinkLength=0.01; addElevation=F; addGtfs=F
+    # writeXml=T; writeShp=F; writeSqlite=T; networkSqlite="data/network.sqlite"
+    # addStrava=F; addBikeSpeed=T
+    
     message("========================================================")
     message("                **Network Generation Setting**")
     message("--------------------------------------------------------")
@@ -53,7 +53,6 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   source('./functions/gtfs2PtNetwork.R')
   source('./functions/writeOutputs.R')
   source('./functions/addInfraSpeedFactor.R')
-    
   
   message("========================================================")
   message("                **Launching Network Generation**")
@@ -94,7 +93,6 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
       left_join(st_drop_geometry(strava_meta),
                 by=c("osm_id"="osmid")) 
   }
-  
   
   edgesAttributed <- networkInput[[2]] %>%
     inner_join(osmAttributes, by="osm_id") %>%
@@ -175,8 +173,6 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   networkNonDisconnected <- removeDisconnectedLinks(networkRestructured,'car,bike')
   networkConnected <- cleanNetworkSubgraph(networkNonDisconnected,'walk,car,bike')
   
-  if(addElevation) system.time(networkConnected[[1]] <- addElevation2Nodes(networkConnected[[1]], 
-                                                                           'data/DEMx10EPSG28355.tif'))
   if(addGtfs) {
     # read in the study region boundary
     greaterMelbourne <- st_read("data/studyRegion.sqlite",quiet=T) %>%
@@ -187,8 +183,6 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
                                                       links=networkConnected[[2]],
                                                       studyRegion=greaterMelbourne)) 
   }
-
-   
   networkFinal <- networkConnected
   
   if(addElevation) system.time(networkFinal[[1]] <- addElevation2Nodes(networkFinal[[1]], 
@@ -206,11 +200,10 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   if(addBikeSpeed) outputFileName=paste0(outputFileName,"_BikeSpeed")
   if(addBikeSpeed) outputFileName=paste0(outputFileName,"_GTFS")
   if(addStrava) outputFileName=paste0(outputFileName,"_Strava")
-  
   outputFileName=paste0(outputFileName,"_", format(Sys.time(),"%d%b%y_%H%M"))
   
-  if(writeSqlite) system.time(exportSQlite(networkFinal, outputFileName = "outputFileName"))
-  if(writeShp) system.time(exportShp(networkFinal, outputFileName = "outputFileName"))
-  if(writeXml) system.time(exportXML(networkFinal, outputFileName = "outputFileName")) 
+  if(writeSqlite) system.time(exportSQlite(networkFinal, outputFileName))
+  if(writeShp) system.time(exportShp(networkFinal, outputFileName))
+  if(writeXml) system.time(exportXML(networkFinal, outputFileName)) 
 }
 
