@@ -150,10 +150,12 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   # add mode to edges, add type to nodes, change cycleway from numbers to text
   networkRestructured <- restructureData(networkDirect, highway_lookup,defaults_df)
 
-  # ensure transport is a directed routeable graph by first removing disconnected
-  # directed links, and then ensuring the subgraph for each mode is connected
-  networkNonDisconnected <- removeDisconnectedLinks(networkRestructured,'car,bike')
-  networkConnected <- cleanNetworkSubgraph(networkNonDisconnected,'walk,car,bike')
+  # ensure transport is a directed routeable graph for each mode (i.e., connected
+  # subgraph). The first function ensures a connected directed subgraph and the
+  # second function ensures a connected subgraph but doesn't consider directionality.
+  # We car and bike modes are directed, but walk is undirected.
+  networkNonDisconnected <- largestDirectedNetworkSubgraph(networkRestructured,'car,bike')
+  networkConnected <- largestNetworkSubgraph(networkNonDisconnected,'walk')
   
   if(addElevation) system.time(networkConnected[[1]] <- addElevation2Nodes(networkConnected[[1]], 
                                                                            'data/DEMx10EPSG28355.tif'))
