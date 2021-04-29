@@ -96,3 +96,6 @@ The sf library requires the following to run
 brew install gdal
 brew install udunits
 ```
+
+## Publications
+- Jafari, A., Both, A., Singh, D., Gunn, L., & Giles-Corti, B. (2021). [Building the road network for city-scale active transport simulation models](https://arxiv.org/abs/2104.03063). *arXiv preprint arXiv:2104.03063.*
