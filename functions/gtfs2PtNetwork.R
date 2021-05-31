@@ -27,7 +27,7 @@ addGtfsLinks <- function(outputLocation="./test/",
   # process the GTFS feed and export relevant tables into a folder
   processGtfs(outputLocation = outputLocation,
               networkNodes = validRoadNodes,
-              studyRegion = greaterMelbourne)
+              studyRegion = studyRegion)
   # read the outputs
   stops <- st_read(paste0(outputLocation,"stops.sqlite"),quiet=T)
   stopTimes <- readRDS(paste0(outputLocation,"stopTimes.rds"))
@@ -173,7 +173,7 @@ processGtfs <- function(outputLocation="./test/",
   # id provided by the GTFS feed)
   validStopsSnappedFinal <- validStopsSnapped %>%
     dplyr::select(-stop_id) %>%
-    distinct(id,x,y) %>%
+    distinct() %>%
     rename(stop_id=id)
   validStopTimesSnappedFinal <- validStopTimesSnapped %>%
     dplyr::select(-stop_id) %>%

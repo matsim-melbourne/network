@@ -64,11 +64,11 @@ exportShp <- function(networkFinal, outputFileName){
              showWarnings = FALSE)
   # writing ShapeFile outputs
   st_write(networkFinal[[2]], paste0('./generatedNetworks/', 
-                                     outputFileName,'/links.shp'), 
+                                     outputFileName,'_shapefiles/links.shp'), 
            driver = "ESRI Shapefile", layer_options = 'GEOMETRY=AS_XY', 
            delete_layer = T)
   st_write(networkFinal[[1]], paste0('./generatedNetworks/', 
-                                     outputFileName,'/nodes.shp'), 
+                                     outputFileName,'_shapefiles/nodes.shp'), 
            driver = "ESRI Shapefile", layer_options = 'GEOMETRY=AS_XY', 
            delete_layer = T)
   
@@ -176,9 +176,10 @@ exportXML <- function(networkFinal, outputFileName = "outputXML"){
     filter(is_oneway==0) %>% 
     rename(from_id=to_id, to_id=from_id, toX=fromX, toY=fromY, fromX=toX, 
            fromY=toY) %>% 
+    mutate(id=NA) %>%
     dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
                   permlanes, capacity, is_oneway, cycleway, highway, is_cycle, 
-                  is_walk, is_car, modes)
+                  is_walk, is_car, modes, id)
   
   links <- rbind(links, bi_links) 
   
