@@ -1,24 +1,55 @@
 
-addGtfsLinks <- function(nodes, 
+addGtfsLinks <- function(outputLocation="./test/",
+                         nodes, 
                          links,
                          gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip", 
                          analysis_start = as.Date("2019-10-11","%Y-%m-%d"), 
                          analysis_end = as.Date("2019-10-17","%Y-%m-%d"),
                          studyRegion=NA){
+  # outputLocation="./gtfs/"
+  # nodes=networkDirected[[1]]
+  # links=networkDirected[[2]]
   # gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip"
   # analysis_start = as.Date("2019-10-11","%Y-%m-%d")
   # analysis_end = as.Date("2019-10-17","%Y-%m-%d")
-  # studyRegion=NA
+  # studyRegion=greaterMelbourne
   
-  links_pt <- processGtfs(nodes, gtfs_feed, analysis_start, analysis_end, studyRegion) # ToDo studyRegion = st_union(st_convex_hull(nodes)) 
-  links_pt <- links_pt %>% 
-    mutate(oneway=1) %>% 
-    dplyr::select(names(links)) 
-  links <- rbind(links, as.data.frame(links_pt)) %>% distinct()
+  validRoadEdges <- links %>%
+    st_drop_geometry() %>%
+    filter(is_walk==1 & is_car==1 & is_cycle==1) %>%
+    dplyr::select(from_id,to_id)
+  validRoadIds <- c(validRoadEdges$from_id,validRoadEdges$to_id) %>% unique()
+  # network nodes that can be reached via walking, cycling, and driving.  
+  validRoadNodes <- nodes %>%
+    filter(id %in% validRoadIds) %>%
+    st_set_crs(28355)
   
-  return(links)
+  # process the GTFS feed and export relevant tables into a folder
+  processGtfs(outputLocation = outputLocation,
+              networkNodes = validRoadNodes,
+              studyRegion = studyRegion)
+  # read the outputs
+  stops <- st_read(paste0(outputLocation,"stops.sqlite"),quiet=T)
+  stopTimes <- readRDS(paste0(outputLocation,"stopTimes.rds"))
+  trips <- readRDS(paste0(outputLocation,"trips.rds"))
+  routes <- readRDS(paste0(outputLocation,"routes.rds"))
+  # We run into trouble if the geometry column is 'geom' instead of 'GEOMETRY'
+  if('GEOMETRY'%in%colnames(stops)) {
+    stops<-stops%>%rename(geom=GEOMETRY)
+  }
+  
+  # return the edges in the PT network as well as write the
+  # transitVehicles.xml and transitSchedule.xml files
+  edgesCombined <- exportGtfsSchedule(
+    links,
+    outputLocation,
+    stops,
+    stopTimes,
+    trips,
+    routes
+  )
+  return(edgesCombined)
 }
-
 
 processGtfs <- function(outputLocation="./test/",
                         networkNodes,
@@ -31,7 +62,7 @@ processGtfs <- function(outputLocation="./test/",
   # gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip"
   # analysis_start = as.Date("2019-10-11","%Y-%m-%d")
   # analysis_end = as.Date("2019-10-17","%Y-%m-%d")
-
+  
   dir.create(outputLocation, showWarnings = FALSE)
   
   gtfs <- read_gtfs(gtfs_feed)
@@ -86,7 +117,7 @@ processGtfs <- function(outputLocation="./test/",
     st_snap_to_grid(1)
   
   # only want stops within the study region
-  if(!is.na(studyRegion)){
+  if(!is.na(st_geometry(studyRegion))){
     message("Cropping to study region")
     validStops <- validStops %>%
       filter(lengths(st_intersects(., studyRegion)) > 0)
@@ -111,16 +142,19 @@ processGtfs <- function(outputLocation="./test/",
     mutate(dist=distanceToNetwork) %>%
     filter(dist<=1000) %>%
     dplyr::select(stop_id,id,x,y) #'stop_id' is the gtfs id, 'id' is the network node id
-    
-    
+  
+  
   # st_write(validStopsSnapped,paste0(outputLocation,"stopsSnapped.sqlite"),delete_layer=TRUE)
   
   validStopTimesSnapped <- validStopTimes %>%
     inner_join(st_drop_geometry(validStopsSnapped),by="stop_id") %>% # IMPORTANT: this join also removes the stops outside of the region!
     arrange(trip_id,stop_sequence) %>%
     group_by(trip_id) %>%
+    # we want at least 3 stops for each trip
+    filter(n()>=3) %>%
     # when we use the snapped locations, two sequential stops may be at the same
     # location. If this is the case, we remove the later stop.
+    # mutate(bad=ifelse(id==lag(id) & row_number()>1,T,F)) %>%
     filter(id!=lag(id) | row_number()==1) %>%
     mutate(stop_sequence=row_number()) %>%
     ungroup() %>%
@@ -133,13 +167,13 @@ processGtfs <- function(outputLocation="./test/",
   # some routes will no longer be present
   validRoutesSnapped <- validRoutes %>%
     filter(route_id %in% validTripsSnapped$route_id)
-    
+  
   
   # replace stop_id with id (i.e., use the network node id instead of the stop
   # id provided by the GTFS feed)
   validStopsSnappedFinal <- validStopsSnapped %>%
     dplyr::select(-stop_id) %>%
-    distinct(id,x,y) %>%
+    distinct() %>%
     rename(stop_id=id)
   validStopTimesSnappedFinal <- validStopTimesSnapped %>%
     dplyr::select(-stop_id) %>%
@@ -153,12 +187,13 @@ processGtfs <- function(outputLocation="./test/",
 }
 
 
-exportGtfsSchedule <- function(outputLocation,
+exportGtfsSchedule <- function(links,
+                               outputLocation,
                                stops,
                                stopTimes,
                                trips,
                                routes){
-
+  
   
   vehicleTripMatching <- trips %>%
     left_join(routes,by="route_id")
@@ -173,37 +208,60 @@ exportGtfsSchedule <- function(outputLocation,
     mutate(to_id=lead(from_id),
            to_x=lead(from_x),
            to_y=lead(from_y)) %>%
+    # the last to node should be the first from node (to make a loop)
+    mutate(to_id=ifelse(is.na(to_id),from_id,to_id)) %>%
+    mutate(to_x=ifelse(is.na(to_x),from_x,to_x)) %>%
+    mutate(to_y=ifelse(is.na(to_y),from_y,to_y)) %>%
+    # filter(from_id==to_id)
     ungroup() %>%
     mutate(arrivalOffset=as.character(as_hms(arrivalOffset)),
            departureOffset=as.character(as_hms(departureOffset)),
            arrival_time=as.character(as_hms(arrival_time)),
-           departure_time=as.character(as_hms(departure_time)))
+           departure_time=as.character(as_hms(departure_time))) %>%
+    as.data.frame()
   
-  ptStops <- ptNetwork %>%
-    dplyr::select(from_id,to_id) %>%
-    distinct() %>%
-    mutate(stop_id=paste0("stop ",row_number()))
+  arrivalTimes <- ptNetwork %>%
+    dplyr::select(arrival_time,trip_id) %>%
+    group_by(trip_id) %>%
+    summarise(arrival_time=min(arrival_time,na.rm=T)) %>%
+    as.data.frame()
   
-  ptNetwork <- ptNetwork %>%
-    left_join(ptStops,by=c("from_id","to_id")) %>%
-    left_join(vehicleTripMatching,by="trip_id") %>%
-    dplyr::select(route_id,service_id,service_type,trip_id,stop_id,arrival_time,departure_time,
-                  arrivalOffset,departureOffset,from_id,to_id,from_x,from_y,to_x,to_y)
+  # finding the distinct routes (same stops and arrival/departure offset times),
+  # and determining their first departure time
+  ptNetworkDepartures <- ptNetwork %>%
+    dplyr::select(trip_id,from_id,from_x,from_y,arrivalOffset,departureOffset,to_id,to_x,to_y) %>%
+    group_by(trip_id) %>%
+    summarise(from_id=paste0(from_id,collapse = "_"),
+              to_id=paste0(to_id,collapse = "_"),
+              arrivalOffset=paste0(arrivalOffset,collapse = "_"),
+              departureOffset=paste0(departureOffset,collapse = "_")) %>%
+    inner_join(arrivalTimes,by='trip_id') %>%
+    arrange(trip_id,arrival_time)%>%
+    group_by(from_id,to_id,arrivalOffset,departureOffset) %>%
+    mutate(route_id_new=formatC(cur_group_id(),digits=0,width=5,flag="0",format="d")) %>%
+    mutate(departure_id=formatC(row_number(),digits=0,width=2,flag="0",format="d")) %>%
+    ungroup() %>%
+    dplyr::select(trip_id,route_id_new,departure_id,departure_time=arrival_time) %>%
+    arrange(route_id_new,departure_id) %>%
+    as.data.frame()
   
-  ptNetworkDistinctEdges <- ptNetwork %>%
+  ptNetwork_StopsAndEdges <- ptNetwork %>%
     dplyr::select(from_id,to_id,from_x,from_y,to_x,to_y) %>%
     distinct() %>%
     filter(!is.na(to_id)) %>% 
-    mutate(GEOMETRY=paste0("LINESTRING(",from_x," ",from_y,",",to_x," ",to_y,")")) %>%
-    st_as_sf(wkt = "GEOMETRY", crs = 28355)
+    mutate(geom=paste0("LINESTRING(",from_x," ",from_y,",",to_x," ",to_y,")")) %>%
+    st_as_sf(wkt = "geom", crs = 28355) %>%
+    mutate(stop_id=paste0("Stop ",formatC(row_number(),digits=0,width=5,flag="0",format="d"))) %>%
+    mutate(link_id=paste0("pt_",formatC(row_number(),digits=0,width=5,flag="0",format="d")))
   
-  # ptNetworkGeom <- ptNetwork %>%
-  #   dplyr::select(service_type,from_id,to_id,from_x,from_y,to_x,to_y) %>%
-  #   distinct() %>%
-  #   mutate(GEOMETRY=paste0("LINESTRING(",from_x," ",from_y,",",to_x," ",to_y,")")) %>%
-  #   st_as_sf(wkt = "GEOMETRY", crs = 28355)
-  # st_write(ptNetworkGeom,"data/ptNetwork.sqlite",delete_layer=TRUE)
-  
+  ptNetworkRoutes <- ptNetwork %>%
+    inner_join(ptNetworkDepartures%>%group_by(route_id_new)%>%
+                 slice(which.min(departure_id))%>%dplyr::select(trip_id,route_id_new),
+               by="trip_id") %>%
+    dplyr::select(route_id_new,from_id,to_id,arrivalOffset,departureOffset) %>%
+    inner_join(ptNetwork_StopsAndEdges%>%st_drop_geometry()%>%dplyr::select(from_id,to_id,stop_id,link_id),
+               by=c("from_id","to_id")) %>%
+    dplyr::select(route_id_new,arrivalOffset,departureOffset,stop_id,link_id)
   
   
   # making tables for XML
@@ -213,80 +271,91 @@ exportGtfsSchedule <- function(outputLocation,
   # for each trip. Have also set the vehicle type here.
   vehicles <- trips %>%
     inner_join(routes,by="route_id") %>%
-    mutate(type=NA,
-           type=ifelse(service_type=="train",1,type),
-           type=ifelse(service_type=="bus",2,type),
-           type=ifelse(service_type=="tram",3,type)) %>%
-    dplyr::select(id=trip_id,type) %>%
-    arrange(id,type)
+    dplyr::select(id=trip_id,service_type) %>%
+    arrange(id,service_type) %>%
+    as.data.frame()
   
   # ./data/transitSchedule.xml: transitSchedule > transitStops
-  transitStops <- ptNetwork %>%
-    dplyr::select(from_id,to_id,from_x,from_y,stop_id) %>%
-    # the id column is the issue, as it doesn't exist
-    # unique()
-    dplyr::distinct() %>%
-    mutate(linkRefId=as.factor(paste0(from_id,"_",to_id))) %>%
-    dplyr::select(stop_id,linkRefId,from_id,to_id,x=from_x,y=from_y) 
+  transitStops <- ptNetwork_StopsAndEdges %>%
+    st_drop_geometry() %>%
+    dplyr::select(stop_id,linkRefId=link_id,x=from_x,y=from_y)
   
   # ./data/transitSchedule.xml: transitSchedule > transitRoute > routeProfile
   # ./data/transitSchedule.xml: transitSchedule > transitRoute > route
   # * trip_id is the transitRoute (i.e., each trip is its own route, with a single
   #   trip. This allows for longer offsets during peak traffic).
   # * route is the same as the refID column since we use a direct line between each stop.
-  routeProfile <- ptNetwork %>%
-    dplyr::select(trip_id,arrivalOffset,departureOffset,from_id,to_id) %>%
-    inner_join(transitStops,by=c("from_id","to_id")) %>%
-    # NOTE: route.link.refId is not the same as the refId column
-    dplyr::select(trip_id,arrivalOffset,departureOffset,refId=stop_id,from_id,to_id)
+  routeProfile <- ptNetworkRoutes %>%
+    dplyr::select(transitRouteId=route_id_new, refId=stop_id,arrivalOffset,
+                  departureOffset,linkRefId=link_id)
   
   # ./data/transitSchedule.xml: transitSchedule > transitRoute > departures
   # vehicleRefId is just the trip_id. This means we can potentially have a 
   # different vehicle for each trip. I have also set the vehicle type here.
-  departures <- ptNetwork %>%
-    # filter(row_number()<200) %>%
-    group_by(trip_id) %>%
-    slice(which.min(row_number())) %>%
-    ungroup() %>%
+  departures <- ptNetworkDepartures %>%
     # mutate(departure_time=as.character(as.hms(departure_time))) %>%
     left_join(vehicles, by=c("trip_id"="id")) %>%
-    dplyr::select(departureTime=departure_time,id=type,vehicleRefId=trip_id)
+    arrange(route_id_new,departure_id,service_type) %>%
+    group_by(service_type) %>%
+    mutate(type=NA,
+           type=ifelse(service_type=="train",1,type),
+           type=ifelse(service_type=="bus",2,type),
+           type=ifelse(service_type=="tram",3,type)) %>%
+    mutate(vehicleRefId=paste0(service_type,"_",formatC(row_number(),digits=0,width=5,flag="0",format="d"))) %>%
+    ungroup() %>%
+    dplyr::select(transitRouteId=route_id_new,departureId=departure_id,
+                  departureTime=departure_time,vehicleRefId,type) %>%
+    as.data.frame()
   
   # Types of vehicles to place in the network
   vehicleTypes <- tribble(
-    ~id, ~description, ~seats, ~standingRoom, ~length, ~accessTime, ~egressTime, ~passengerCarEquivalents,
-    1  , "train"     , 114   , 206          , 150    , "0.0"      , "0.0"      , 0.25                    ,
-    2  , "bus"       , 25    , 13           , 15     , "0.0"      , "0.0"      , 0.25                    ,
-    3  , "tram"      , 16    , 50           , 30     , "0.0"      , "0.0"      , 0.25
+    ~id, ~service_type, ~seats, ~standingRoom, ~length, ~accessTime, ~egressTime, ~passengerCarEquivalents,
+    1  , "train"      , 114   , 206          , 150    , "0.0"      , "0.0"      , 0.25                    ,
+    2  , "bus"        , 25    , 13           , 15     , "0.0"      , "0.0"      , 0.25                    ,
+    3  , "tram"       , 16    , 50           , 30     , "0.0"      , "0.0"      , 0.25
   )
   
-  
-  
+  echo("writing transitVehicles.xml\n")
+  outxml<-paste0(outputLocation,"transitVehicles.xml")
   # transitVehicles
   cat(
     "<?xml version=\"1.0\" ?>
-<vehicleDefinitions xmlns=\"http://www.matsim.org/files/dtd\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.matsim.org/files/dtd http://www.matsim.org/files/dtd/vehicleDefinitions_v1.0.xsd\">\n",
-    file=paste0(outputLocation,"transitVehicles.xml"),append=FALSE)
+    <vehicleDefinitions xmlns=\"http://www.matsim.org/files/dtd\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.matsim.org/files/dtd http://www.matsim.org/files/dtd/vehicleDefinitions_v1.0.xsd\">\n",
+    file=outxml,append=FALSE)
+  str<-""
+  writeInterval<-500
+  processed<-0
   for (i in 1:nrow(vehicleTypes)) {
-    cat(paste0("  <vehicleType id=\"",vehicleTypes[i,]$id,"\">\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
-    cat(paste0("    <description>",vehicleTypes[i,]$description,"</description>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
-    cat(paste0("    <capacity>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
-    cat(paste0("      <seats persons=\"",vehicleTypes[i,]$seats,"\"/>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
-    cat(paste0("      <standingRoom persons=\"",vehicleTypes[i,]$standingRoom,"\"/>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
-    cat(paste0("    </capacity>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
-    cat(paste0("    <length meter=\"",vehicleTypes[i,]$length,"\"/>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
-    cat(paste0("    <accessTime secondsPerPerson=\"",vehicleTypes[i,]$accessTime,"\"/>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
-    cat(paste0("    <egressTime secondsPerPerson=\"",vehicleTypes[i,]$egressTime,"\"/>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
-    cat(paste0("    <passengerCarEquivalents pce=\"",vehicleTypes[i,]$passengerCarEquivalents,"\"/>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
-    cat(paste0("  </vehicleType>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+    str<-paste0(str,"  <vehicleType id=\"",vehicleTypes[i,]$id,"\">\n")
+    str<-paste0(str,"    <description>",vehicleTypes[i,]$service_type,"</description>\n")
+    str<-paste0(str,"    <capacity>\n")
+    str<-paste0(str,"      <seats persons=\"",vehicleTypes[i,]$seats,"\"/>\n")
+    str<-paste0(str,"      <standingRoom persons=\"",vehicleTypes[i,]$standingRoom,"\"/>\n")
+    str<-paste0(str,"    </capacity>\n")
+    str<-paste0(str,"    <length meter=\"",vehicleTypes[i,]$length,"\"/>\n")
+    str<-paste0(str,"    <accessTime secondsPerPerson=\"",vehicleTypes[i,]$accessTime,"\"/>\n")
+    str<-paste0(str,"    <egressTime secondsPerPerson=\"",vehicleTypes[i,]$egressTime,"\"/>\n")
+    str<-paste0(str,"    <passengerCarEquivalents pce=\"",vehicleTypes[i,]$passengerCarEquivalents,"\"/>\n")
+    str<-paste0(str,"  </vehicleType>\n")
   }
-  for (i in 1:nrow(vehicles)) {
-    cat(paste0("  <vehicle id=\"",vehicles[i,]$id,"\" type=\"",vehicles[i,]$type,"\"/>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+  cat(str,file=outxml,append=TRUE)
+  str<-""
+  for (i in 1:nrow(departures)) {
+    str<-paste0(str,"  <vehicle id=\"",departures[i,]$vehicleRefId,"\" type=\"",departures[i,]$type,"\"/>\n")
+    if (i%%writeInterval==0 || i==nrow(departures)) {
+      cat(str,file=outxml,append=TRUE)
+      str<-"" # clear the buffer after writing it out
+    }
+    # report progress
+    if (i%%50==0 || i==nrow(departures)) printProgress(i,nrow(departures),' Vehicles')
   }
-  cat(paste0("</vehicleDefinitions>\n"),file=paste0(outputLocation,"transitVehicles.xml"),append=TRUE)
+  cat(paste0("</vehicleDefinitions>\n"),file=outxml,append=TRUE)
   
   
   
+  echo("writing transitSchedule.xml\n")
+  outxml<-paste0(outputLocation,"transitSchedule.xml")
+  str<-""
   
   # transitSchedule
   cat(
@@ -294,87 +363,112 @@ exportGtfsSchedule <- function(outputLocation,
     <!DOCTYPE transitSchedule SYSTEM \"http://www.matsim.org/files/dtd/transitSchedule_v1.dtd\">
     <transitSchedule>
     <transitStops>\n",
-    file=paste0(outputLocation,"transitSchedule.xml"),append=FALSE)
+    file=outxml,append=FALSE)
   
+  echo("writing transitStops\n")
   for (i in 1:nrow(transitStops)) {
     # for (i in 1:100) {
-    cat(paste0("    <stopFacility id=\"",transitStops[i,]$stop_id,"\" isBlocking=\"false\" linkRefId=\"",
-               transitStops[i,]$linkRefId,"\" x=\"",transitStops[i,]$x,"\" y=\"",
-               transitStops[i,]$y,"\"/>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+    str<-paste0(str,
+                "    <stopFacility id=\"",transitStops[i,]$stop_id,"\" isBlocking=\"false\" linkRefId=\"",
+                transitStops[i,]$linkRefId,"\" x=\"",transitStops[i,]$x,"\" y=\"",transitStops[i,]$y,"\"/>\n")
+    
+    if (i%%writeInterval==0 || i==nrow(transitStops)) {
+      cat(str,file=outxml,append=TRUE)
+      str<-"" # clear the buffer after writing it out
+    }
+    # report progress
+    if (i%%50==0 || i==nrow(transitStops)) printProgress(i,nrow(transitStops),' transitStops')
   }
-  cat(paste0("  </transitStops>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
-  cat(paste0("  <transitLine id=\"Melbourne\">\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+  cat(paste0("  </transitStops>\n"),file=outxml,append=TRUE)
+  cat(paste0("  <transitLine id=\"Melbourne\">\n"),file=outxml,append=TRUE)
+  
+  echo("writing vehicleTripMatching\n")
+  str<-""
+  writeInterval<-100
+  
+  transitRoutes<-routeProfile$transitRouteId%>%unique()%>%sort()
   
   # TODO Ask @Alan to check this part:
-  for (i in 1:nrow(vehicleTripMatching)) {
+  for (i in 1:length(transitRoutes)) {
     # for (i in 1:100) {
-    routeProfileCurrent <- routeProfile%>%filter(trip_id==vehicleTripMatching[i,]$trip_id) 
-    if(nrow(routeProfileCurrent)>0){ # I added this to drop those empty route profiles
-      cat(paste0("    <transitRoute id=\"",vehicleTripMatching[i,]$trip_id,"\">\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
-      cat(paste0("      <description>",vehicleTripMatching[i,]$service_id,"</description>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
-      cat(paste0("      <transportMode>",vehicleTripMatching[i,]$service_type,"</transportMode>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
-      cat(paste0("      <routeProfile>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+    routeProfileCurrent <- routeProfile[routeProfile$transitRouteId==transitRoutes[i],]
+    departuresCurrent <- departures[departures$transitRouteId==transitRoutes[i],]
+    if(nrow(routeProfileCurrent)>1){ # I added this to drop those empty route profiles
+      str<-paste0(str,"    <transitRoute id=\"",transitRoutes[i],"\">\n")
+      str<-paste0(str,"      <description>",departuresCurrent[1,]$type,"</description>\n")
+      str<-paste0(str,"      <transportMode>pt</transportMode>\n")
+      str<-paste0(str,"      <routeProfile>\n")
       
       for (j in 1:nrow(routeProfileCurrent)) { 
         # first row: no arrival offset
-        if (j == 1) cat(paste0("        <stop awaitDeparture=\"true\" departureOffset=\"",
-                               routeProfileCurrent[j,]$departureOffset,
-                               "\" refId=\"",
-                               routeProfileCurrent[j,]$refId,
-                               "\"/>\n"), 
-                        file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+        # <stop awaitDeparture="true" departureOffset="departureOffset" refId="refId">
+        if (j == 1) str<-paste0(str,"        <stop awaitDeparture=\"true\" departureOffset=\"",
+                                routeProfileCurrent[j,]$departureOffset,
+                                "\" refId=\"",
+                                routeProfileCurrent[j,]$refId,
+                                "\"/>\n")
         # rows except first and last
-        else if (j < nrow(routeProfileCurrent)) cat(paste0("        <stop arrivalOffset=\"",
-                                                           routeProfileCurrent[j,]$arrivalOffset,
-                                                           "\" awaitDeparture=\"true\" departureOffset=\"",
-                                                           routeProfileCurrent[j,]$departureOffset,
-                                                           "\" refId=\"",
-                                                           routeProfileCurrent[j,]$refId,
-                                                           "\"/>\n"),
-                                                    file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+        # <stop arrivalOffset="arrivalOffset" awaitDeparture="true" departureOffset="departureOffset" refId="refId">
+        else if (j < nrow(routeProfileCurrent)) {
+          str<-paste0(str,"        <stop arrivalOffset=\"",
+                      routeProfileCurrent[j,]$arrivalOffset,
+                      "\" awaitDeparture=\"true\" departureOffset=\"",
+                      routeProfileCurrent[j,]$departureOffset,
+                      "\" refId=\"",
+                      routeProfileCurrent[j,]$refId,
+                      "\"/>\n")
+        }
         # last row: no departure offset
-        else cat(paste0("        <stop arrivalOffset=\"",
-                        routeProfileCurrent[j,]$arrivalOffset,
-                        "\" refId=\"",
-                        routeProfileCurrent[j,]$refId,
-                        "\"/>\n"),
-                 file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+        # <stop arrivalOffset="arrivalOffset" refId="refId">
+        else {
+          str<-paste0(str,"        <stop arrivalOffset=\"",
+                      routeProfileCurrent[j,]$arrivalOffset,
+                      "\" refId=\"",
+                      routeProfileCurrent[j,]$refId,
+                      "\"/>\n")
+        }
       }
-      cat(paste0("      </routeProfile>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
-      cat(paste0("      <route>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+      str<-paste0(str,"      </routeProfile>\n")
+      str<-paste0(str,"      <route>\n")
       for (j in 1:nrow(routeProfileCurrent)) {
-        cat(paste0("        <link refId=\"",
-                   paste0(routeProfileCurrent[j,]$from_id,"_",routeProfileCurrent[j,]$to_id),
-                   "\"/>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+        str<-paste0(str,"        <link refId=\"",
+                    routeProfileCurrent[j,]$linkRefId,
+                    "\"/>\n")
       }
-      cat(paste0("      </route>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+      str<-paste0(str,"      </route>\n")
       
-      cat(paste0("      <departures>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
-      departuresCurrent <- departures%>%filter(vehicleRefId==vehicleTripMatching[i,]$trip_id)
+      str<-paste0(str,"      <departures>\n")
       for (k in 1:nrow(departuresCurrent)) {
-        cat(paste0("        <departure departureTime=\"",
-                   departuresCurrent[k,]$departureTime,
-                   "\" id=\"",
-                   departuresCurrent[k,]$id,
-                   "\" vehicleRefId=\"",
-                   departuresCurrent[k,]$vehicleRefId,
-                   "\"/>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+        str<-paste0(str,"        <departure departureTime=\"",
+                    departuresCurrent[k,]$departureTime,
+                    "\" id=\"",
+                    departuresCurrent[k,]$departureId,
+                    "\" vehicleRefId=\"",
+                    departuresCurrent[k,]$vehicleRefId,
+                    "\"/>\n")
       }   
-      cat(paste0("      </departures>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
-      cat(paste0("    </transitRoute>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+      str<-paste0(str,"      </departures>\n")
+      str<-paste0(str,"    </transitRoute>\n")
     }
     
+    if (i%%writeInterval==0 || i==nrow(vehicleTripMatching)) {
+      cat(str,file=outxml,append=TRUE)
+      str<-"" # clear the buffer after writing it out
+    }
+    # report progress
+    if (i%%50==0 || i==nrow(vehicleTripMatching)) printProgress(i,nrow(vehicleTripMatching),' vehicleTripMatching')
   }
-  cat(paste0("  </transitLine>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
-  cat(paste0("</transitSchedule>\n"),file=paste0(outputLocation,"transitSchedule.xml"),append=TRUE)
+  cat(paste0("  </transitLine>\n"),file=outxml,append=TRUE)
+  cat(paste0("</transitSchedule>\n"),file=outxml,append=TRUE)
   
   
   
   # routeProfile, stop
   # route, link
   # departures, departure
-  ptNetworkMATSim <- ptNetworkDistinctEdges %>% 
+  ptNetworkMATSim <- ptNetwork_StopsAndEdges %>% 
     mutate(length=round(as.numeric(st_length(.)),3)) %>%
+    mutate(length=ifelse(length<1,1,length)) %>%
     mutate(highway="pt") %>% 
     mutate(freespeed=11.1) %>% 
     mutate(permlanes=1) %>% 
@@ -385,11 +479,13 @@ exportGtfsSchedule <- function(outputLocation,
     mutate(is_walk=0) %>% 
     mutate(is_car=0) %>% 
     mutate(modes="pt") %>%
-    dplyr::select(from_id, to_id, fromX=from_x, fromY=from_y, toX=to_x, toY=to_y,
+    dplyr::select(id=link_id, from_id, to_id, fromX=from_x, fromY=from_y, toX=to_x, toY=to_y,
                   length, freespeed, permlanes, capacity, highway, is_oneway,
                   cycleway, is_cycle, is_walk, is_car, modes)
   
-  return(ptNetworkMATSim)
+  edgesCombined <- bind_rows(links,ptNetworkMATSim) %>%
+    st_sf() %>%
+    mutate(cycleway=as.character(cycleway))
+  
+  return(edgesCombined)
 }
-
-
