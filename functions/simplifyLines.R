@@ -130,9 +130,11 @@ simplifyLines <- function(nodes,edges){
     # left_join(cluster_edges, by="cluster_id") %>%
     distinct() %>%
     group_by(cluster_id,from_id,to_id) %>%
-    summarise(length=sum(length,na.rm=T),
-              freespeed=max(freespeed,na.rm=T),permlanes=max(permlanes,na.rm=T),
-              laneCapacity=max(laneCapacity,na.rm=T),is_oneway=max(is_oneway,na.rm=T),
+    summarise(freespeed=weighted.mean(freespeed,length,na.rm=T),
+              permlanes=round(weighted.mean(permlanes,length,na.rm=T)),
+              laneCapacity=round(weighted.mean(laneCapacity,length,na.rm=T)),
+              length=sum(length,na.rm=T),
+              is_oneway=max(is_oneway,na.rm=T),
               cycleway=max(cycleway,na.rm=T),
               highway_order=min(highway_order,na.rm=T), # selecting the highest rank
               is_cycle=max(is_cycle,na.rm=T),is_walk=max(is_walk,na.rm=T),
@@ -173,9 +175,11 @@ simplifyLines <- function(nodes,edges){
     # left_join(cluster_edges, by="cluster_id") %>%
     distinct() %>%
     group_by(cluster_id,from_id,to_id) %>%
-    summarise(length=sum(length,na.rm=T),
-              freespeed=max(freespeed,na.rm=T),permlanes=max(permlanes,na.rm=T),
-              laneCapacity=max(laneCapacity,na.rm=T),is_oneway=0,
+    summarise(freespeed=weighted.mean(freespeed,length,na.rm=T),
+              permlanes=round(weighted.mean(permlanes,length,na.rm=T)),
+              laneCapacity=round(weighted.mean(laneCapacity,length,na.rm=T)),
+              length=sum(length,na.rm=T),
+              is_oneway=max(is_oneway,na.rm=T),
               cycleway=max(cycleway,na.rm=T),
               highway_order=min(highway_order,na.rm=T), # selecting the highest rank
               is_cycle=max(is_cycle,na.rm=T),is_walk=max(is_walk,na.rm=T),

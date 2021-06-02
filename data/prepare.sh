@@ -6,6 +6,8 @@ isTest=false
 while test $# -gt 0
 do
     case "$1" in
+        -region) FILES+=("studyRegion.osm")
+            ;;
         -osm19) FILES+=("melbourne.osm")
             ;;
         -melb) FILES+=("melbourne.sqlite")
@@ -19,6 +21,7 @@ do
         -test) isTest=true
         	;;                
         -A) FILES=(
+              "studyRegion.sqlite"
               "melbourne.osm"
               "melbourne.sqlite"
               "network.sqlite"

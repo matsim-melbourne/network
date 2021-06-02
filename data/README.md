@@ -8,6 +8,7 @@ To populate this directory with the required data files, use the `./prepare.sh` 
 
 | Argument | Input file                   | Description                                   |
 |----------|------------------------------|-----------------------------------------------|
+| -region  | studyRegion.sqlite           | Greater Melbourne region                      |
 | -osm19   | melbourne.osm                | Raw OSM file for Melbourne, 2019              |
 | -melb    | melbourne.sqlite             | Road attributes                               |
 | -net     | network.sqlite               | non-planar edges and nodes                    |

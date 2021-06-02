@@ -1,27 +1,20 @@
 makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F, 
-                            addGtfs=F, addIvabmPt=F, writeXml=F, writeSqlite=T,
+                            addGtfs=F, writeXml=F, writeShp=F, writeSqlite=T,
                             networkSqlite="data/network.sqlite"){
 
-    # crop2TestArea=F
-    # shortLinkLength=20
-    # addElevation=F
-    # addGtfs=F
-    # addIvabmPt=F
-    # writeXml=F
-    # writeSqlite=T
-    # networkSqlite="data/network.sqlite"
+    # crop2TestArea=F; shortLinkLength=20; addElevation=F; addGtfs=F
+    # writeXml=F; writeShp=F; writeSqlite=T; networkSqlite="data/network.sqlite"
     
     message("========================================================")
     message("                **Network Generation Setting**")
     message("--------------------------------------------------------")
     message(paste0("- Cropping to a test area:                        ",crop2TestArea))
-   #message(paste0("- Detailed network only in the focus area:        ", focus_area_flag))
     message(paste0("- Shortest link length in network simplification: ", shortLinkLength))
     message(paste0("- Adding elevation:                               ", addElevation))
     message(paste0("- Adding PT from GTFS:                            ", addGtfs))
-    message(paste0("- Adding PT from IV-ABM:                          ", addIvabmPt))
-    message(paste0("- Writing outputs in MATSim XML format:           ", writeXml))
     message(paste0("- Writing outputs in SQLite format:               ", writeSqlite))
+    message(paste0("- Writing outputs in ShapeFile format:            ", writeShp))
+    message(paste0("- Writing outputs in MATSim XML format:           ", writeXml))
     message("========================================================")
   #libraries
   library(sf)
@@ -31,7 +24,6 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   library(stringr)
   library(igraph)
   library(raster)
-  library(XML)
   library(rgdal)
   library(purrr)
   # These are needed if addGtfs=T
@@ -41,15 +33,11 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
     library(lwgeom)
     library(hms)
   }
-  # This is needed if addIvabmPt=T
-  if(addIvabmPt){
-    library(nngeo)
-  }
   
   #functions
   source('./functions/etc/logging.R')
-  # source('./functions/simplifyNetwork.R')
   source('./functions/crop2TestArea.R')
+  source('./functions/cleanNetwork.R')
   source('./functions/buildDefaultsDF.R')
   source('./functions/processOsmTags.R')
   source('./functions/largestConnectedComponent.R')
@@ -62,10 +50,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   source('./functions/restructureData.R')
   source('./functions/addElevation2Nodes.R')
   source('./functions/gtfs2PtNetwork.R')
-  source('./functions/etc/IVABMIntegrator.R')
-  source('./functions/cleanNetwork.R')
-  source('./functions/exportSQlite.R')
-  source('./functions/exportXML.R')
+  source('./functions/writeOutputs.R')
     
   
   message("========================================================")
@@ -75,6 +60,14 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   # Note: writing logical fields to sqlite is a bad idea, so switching to integers
     networkInput <- list(st_read(networkSqlite,layer="nodes",quiet=T),
                          st_read(networkSqlite,layer="edges",quiet=T))
+    
+    # We run into trouble if the geometry column is 'geom' instead of 'GEOMETRY'
+    if('GEOMETRY'%in%colnames(networkInput[[1]])) {
+      networkInput[[1]]<-networkInput[[1]]%>%rename(geom=GEOMETRY)
+    }
+    if('GEOMETRY'%in%colnames(networkInput[[2]])) {
+      networkInput[[2]]<-networkInput[[2]]%>%rename(geom=GEOMETRY)
+    }
   
   cat(paste0("Network input, nodes:\n"))
   str(networkInput[[1]])
@@ -85,9 +78,10 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   
   # select from https://github.com/JamesChevalier/cities/tree/master/australia/victoria
   if(crop2TestArea)system.time(networkInput <- crop2Poly(networkInput,
-                                                         "city-of-melbourne_victoria"))  
+                                                         "city-of-melbourne_victoria"))
   
-  osm_metadata <- st_read(networkSqlite,layer="osm_metadata",quiet=T)
+  osm_metadata <- st_read(networkSqlite,layer="osm_metadata",quiet=T) %>%
+    filter(osm_id%in%networkInput[[2]]$osm_id)
   defaults_df <- buildDefaultsDF()
   highway_lookup <- defaults_df %>% dplyr::select(highway, highway_order)
   system.time( osmAttributes <- processOsmTags(osm_metadata,defaults_df))
@@ -112,7 +106,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   # simplify intersections while preserving attributes and original geometry.
   system.time(intersectionsSimplified <- simplifyIntersections(largestComponent[[1]],
                                                                largestComponent[[2]],
-                                                               20))
+                                                               shortLinkLength))
   
   # Merge edges going between the same two nodes, picking the shortest geometry.
   # * One-way edges going in the same direction will be merged
@@ -156,15 +150,25 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   # add mode to edges, add type to nodes, change cycleway from numbers to text
   networkRestructured <- restructureData(networkDirect, highway_lookup,defaults_df)
 
-  if(addElevation) system.time(networkRestructured[[1]] <- addElevation2Nodes(networkRestructured[[1]], 
-                                                                        'data/DEMx10EPSG28355.tif'))
-  if(addGtfs) system.time(networkRestructured[[2]] <- addGtfsLinks(networkRestructured[[1]], 
-                                                                   networkRestructured[[2]])) 
-  if(addIvabmPt) system.time(networkRestructured <- integrateIVABM(st_drop_geometry(networkRestructured[[1]]), 
-                                                                   networkRestructured[[2]]))
+  # ensure transport is a directed routeable graph by first removing disconnected
+  # directed links, and then ensuring the subgraph for each mode is connected
+  networkNonDisconnected <- removeDisconnectedLinks(networkRestructured,'car,bike')
+  networkConnected <- cleanNetworkSubgraph(networkNonDisconnected,'walk,car,bike')
   
-  system.time(networkFinal <- cleanNetwork(networkRestructured, 
-                                           network_modes="")) # leave the network_modes empty if not needed
+  if(addElevation) system.time(networkConnected[[1]] <- addElevation2Nodes(networkConnected[[1]], 
+                                                                           'data/DEMx10EPSG28355.tif'))
+  if(addGtfs) {
+    # read in the study region boundary
+    greaterMelbourne <- st_read("data/studyRegion.sqlite",quiet=T) %>%
+      st_buffer(10000) %>%
+      st_snap_to_grid(1)
+    system.time(networkConnected[[2]] <- addGtfsLinks(outputLocation="./gtfs/",
+                                                      nodes=networkConnected[[1]], 
+                                                      links=networkConnected[[2]],
+                                                      studyRegion=greaterMelbourne)) 
+  }
+ 
+  networkFinal <- networkConnected
   
   # writing outputs ---------------------------------------------------------
   message("========================================================")
@@ -172,6 +176,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   message("--------------------------------------------------------")
 
   if(writeSqlite) system.time(exportSQlite(networkFinal, outputFileName = "MATSimMelbNetwork"))
+  if(writeShp) system.time(exportShp(networkFinal, outputFileName = "MATSimMelbNetwork"))
   if(writeXml) system.time(exportXML(networkFinal, outputFileName = "MATSimMelbNetwork")) # uncomment if you want xml output
 }
 
