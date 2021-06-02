@@ -15,20 +15,27 @@ combineRedundantEdges <- function(nodes_current,edges_current){
       dplyr::select(uid,current_group,length)
     # Now merging based on the 'current_group' column, replacing the length and
     # geometry with the shortest one in the group.
-    grouped_edges_merged <- grouped_edges %>%
+    grouped_edges_merged <- grouped_edges %>% 
       dplyr::select(-uid,-length) %>%
       inner_join(edges_shortest_geom, by="current_group") %>%
       group_by(current_group) %>%
       summarise(uid=min(uid,na.rm=T),length=min(length,na.rm=T),
                 from_id=min(from_id,na.rm=T),to_id=max(to_id,na.rm=T),
-                freespeed=max(freespeed,na.rm=T),permlanes=sum(permlanes,na.rm=T),
-                laneCapacity_sum=sum(laneCapacity,na.rm=T),is_oneway=max(is_oneway,na.rm=T),
-                cycleway=max(cycleway,na.rm=T),
+                freespeed_max=max(freespeed,na.rm = T),
+                freespeed=weighted.mean(freespeed,w=(permlanes*laneCapacity),na.rm=T),
+                laneCapacity_sum=sum(laneCapacity,na.rm=T),
+                laneCapacity=round(weighted.mean(laneCapacity,w=permlanes,na.rm=T)),
+                permlanes=sum(permlanes,na.rm=T),
+                is_oneway=max(is_oneway,na.rm=T),cycleway=max(cycleway,na.rm=T),
                 highway_order=min(highway_order,na.rm=T), # selecting the highest rank
                 is_cycle=max(is_cycle,na.rm=T),is_walk=max(is_walk,na.rm=T),
                 is_car=max(is_car,na.rm=T),group_count=max(group_count,na.rm=T),
                 laneCapacity_average=round(mean(laneCapacity,na.rm=T))) %>%
       dplyr::select(-current_group) %>%
+      # If non-car links were merged, sum of weights will be 0, so using max speed
+      mutate(freespeed=ifelse(freespeed=="NaN",freespeed_max,freespeed)) %>% 
+      # If non-car links were merged, sum of weights will be 0, so using sum capacity
+      mutate(laneCapacity=ifelse(laneCapacity=="NaN",laneCapacity_sum,laneCapacity)) %>% 
       ungroup()
     return(grouped_edges_merged)
   }
@@ -39,8 +46,8 @@ combineRedundantEdges <- function(nodes_current,edges_current){
     # Only road edges should count towards the number of lanes
     mutate(permlanes=ifelse(is_car==0,0,permlanes)) %>%
     # Only road edges can be one way
-    mutate(is_oneway=ifelse(is_car==0,0,is_oneway))
-  
+    mutate(is_oneway=ifelse(is_car==0,0,is_oneway))  
+
   # one-way edges
   edges_directed <- edges_current %>%
     filter(is_oneway==1) %>%
@@ -51,7 +58,7 @@ combineRedundantEdges <- function(nodes_current,edges_current){
   # Now merging multiple one-way lanes going in the same direction.
   # Note, nothing appears to get merged here.
   edges_directed_merged <- groupingFunction(edges_directed) %>%
-    rename(laneCapacity=laneCapacity_sum) %>%
+    #rename(laneCapacity=laneCapacity_sum) %>%
     dplyr::select(-group_count,-laneCapacity_average)
   
   
@@ -71,8 +78,8 @@ combineRedundantEdges <- function(nodes_current,edges_current){
   edges_directed_opposite_merged <- groupingFunction(edges_directed_opposite) %>%
     # if the group_count is greater than one, then the road is two-way
     mutate(is_oneway=ifelse(group_count>1,0,1)) %>%
-    rename(laneCapacity=laneCapacity_sum) %>%
-    mutate(laneCapacity=ifelse(group_count>1,laneCapacity_average,laneCapacity)) %>%
+    #rename(laneCapacity=laneCapacity_sum) %>%
+    #mutate(laneCapacity=ifelse(group_count>1,laneCapacity_average,laneCapacity)) %>%
     dplyr::select(-group_count,-laneCapacity_average)
   
   # Adding the directed edges that have merged into undirected edges to the 
@@ -97,7 +104,7 @@ combineRedundantEdges <- function(nodes_current,edges_current){
   
   # Merging undirected edges
   edges_undirected_merged <- groupingFunction(edges_undirected_grouped) %>%
-    rename(laneCapacity=laneCapacity_sum) %>%
+    #rename(laneCapacity=laneCapacity_sum) %>%
     dplyr::select(-group_count,-laneCapacity_average)
   
   

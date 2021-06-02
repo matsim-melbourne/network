@@ -12,7 +12,6 @@ combineUndirectedAndDirectedEdges <- function(nodes_current,edges_current){
   # directions or a mixture of one-way and two-way edges
   edges_grouped <- edges_current %>%
     st_drop_geometry() %>%
-    #filter(cycleway!="bikepath") %>% 
     mutate(min_from_id=ifelse(from_id<to_id,from_id,to_id)) %>%
     mutate(min_to_id=ifelse(to_id>from_id,to_id,from_id)) %>%
     # need to preserve from id, to id order for directed roads
@@ -43,14 +42,22 @@ combineUndirectedAndDirectedEdges <- function(nodes_current,edges_current){
     group_by(current_group) %>%
     summarise(uid=min(uid,na.rm=T),length=min(length,na.rm=T),
               from_id=min(min_from_id,na.rm=T),to_id=max(min_to_id,na.rm=T),
-              freespeed=max(freespeed,na.rm=T),permlanes=sum(permlanes,na.rm=T),
-              laneCapacity=sum(laneCapacity,na.rm=T),is_oneway=min(undirected_road,na.rm=T),
+              freespeed_max=max(freespeed,na.rm = T),
+              freespeed=weighted.mean(freespeed,w=(permlanes*laneCapacity),na.rm=T),
+              laneCapacity_sum=sum(laneCapacity,na.rm=T),
+              laneCapacity=weighted.mean(laneCapacity,w=permlanes,na.rm=T),
+              permlanes=sum(permlanes,na.rm=T),
+              is_oneway=min(undirected_road,na.rm=T),
               cycleway=max(cycleway,na.rm=T),
               highway_order=min(highway_order,na.rm=T), # selecting the highest rank
               is_cycle=max(is_cycle,na.rm=T),is_walk=max(is_walk,na.rm=T),
               is_car=max(is_car,na.rm=T),
               from_id_directed=max(from_id_directed,na.rm=T),
               to_id_directed=max(to_id_directed,na.rm=T)) %>%
+    # If non-car links were merged, sum of weights will be 0, so using max speed
+    mutate(freespeed=ifelse(freespeed=="NaN",freespeed_max,freespeed)) %>% 
+    # If non-car links were merged, sum of weights will be 0, so using sum capacity
+    mutate(laneCapacity=ifelse(laneCapacity=="NaN",laneCapacity_sum,laneCapacity)) %>% 
     # directed edges need the from id and to id in the correct order
     mutate(from_id=ifelse(from_id_directed==-1,from_id,from_id_directed)) %>%
     mutate(to_id=ifelse(to_id_directed==-1,to_id,to_id_directed)) %>%

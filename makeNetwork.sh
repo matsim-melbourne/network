@@ -14,13 +14,13 @@ do
             ;;
         -pt) FLAGS[3]=T
             ;;
-        -ivbm) FLAGS[4]=T
-            ;;                
-        -xml) FLAGS[5]=T
+        -xml) FLAGS[4]=T
+            ;;
+        -shp) FLAGS[5]=T
             ;;
         -sqlite) FLAGS[6]=T
             ;;
-        -A) FLAGS=(F 20 T T F T T)
+        -A) FLAGS=(F 20 T T T F T)
             ;;
         --*) echo "bad option $1"
             ;;

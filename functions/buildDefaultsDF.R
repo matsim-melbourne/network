@@ -29,6 +29,7 @@ buildDefaultsDF <- function(){
      "corridor"       ,  1        ,  (15/3.6) ,  0        ,    50        ,  0       ,  1      ,  0     , 21            ,
      "steps"          ,  1        ,  (15/3.6) ,  0        ,    10        ,  0       ,  1      ,  0     , 22
   )
-
+  message("Using default road attribute values in Australia, source https://github.com/agentsoz/bdi-abm-integration/blob/master/util/src/main/java/io/github/agentsoz/util/NetworkGenerator.java#L90-L163. Edit buildDefaults.R function if other values are desired for other countries.")
+  
   return(defaults_df)
 }

@@ -35,7 +35,15 @@ processOsmTags <- function(osm_df,this_defaults_df){
       if(length(oneway_tags)==0) oneway_tags <- c()
       
       if("maxspeed" %in% tags) {
-        freeSpeed=as.integer(tags[which(tags=="maxspeed")+1])/3.6
+        maxSpeed=as.integer(tags[which(tags=="maxspeed")+1])
+        # added this as some links had weird "masxspeed" values such as 500km/h!
+        # 150km/h limit might cause issues for autobahns in Germany, AJ Jan 2021.
+        if(!(is.na(maxSpeed)) & 140 < maxSpeed){
+          message("Skiping speeds higher than 140km/h from OSM, consider editing processOSMTags.R if higher speeds are desired - AJ Jan 2021.")
+          freeSpeed <- NA
+        }else{
+          freeSpeed=maxSpeed/3.6
+        }
         # added is.na since one of the maxspeed has a value of "50; 40"
         if(!is.na(freeSpeed)) {
           df$freespeed[1]=freeSpeed
