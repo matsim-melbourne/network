@@ -51,6 +51,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   source('./functions/addElevation2Nodes.R')
   source('./functions/gtfs2PtNetwork.R')
   source('./functions/writeOutputs.R')
+  source('./functions/srl2PtNetwork.R')
     
   
   message("========================================================")
@@ -78,7 +79,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   
   # select from https://github.com/JamesChevalier/cities/tree/master/australia/victoria
   if(crop2TestArea)system.time(networkInput <- crop2Poly(networkInput,
-                                                         "city-of-melbourne_victoria"))
+                                                         "city-of-monash_victoria"))
   
   osm_metadata <- st_read(networkSqlite,layer="osm_metadata",quiet=T) %>%
     filter(osm_id%in%networkInput[[2]]$osm_id)
