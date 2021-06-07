@@ -171,6 +171,9 @@ exportXML <- function(networkFinal, outputFileName = "outputXML"){
   
   # Links -------------------------------------------------------------------
   if(class(links)[1]=="sf") links <- st_drop_geometry(links)
+  # Adding empty id column if doesn't exist
+  if(!("id" %in% colnames(links))) links <- links %>% mutate(id=NA)
+  
   # Adding a reverse links for bi-directionals
   bi_links <- links %>% 
     filter(is_oneway==0) %>% 
