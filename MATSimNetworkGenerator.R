@@ -51,7 +51,8 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   source('./functions/addElevation2Nodes.R')
   source('./functions/gtfs2PtNetwork.R')
   source('./functions/writeOutputs.R')
-    
+  source('./functions/densifyNetwork.R')
+  
   
   message("========================================================")
   message("                **Launching Network Generation**")
@@ -142,20 +143,27 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
                                                 combinedUndirectedAndDirected2[[2]]))
   system.time(edgesCombined3 <- combineRedundantEdges(edgesSimplified2[[1]],
                                                       edgesSimplified2[[2]]))
-  # simplify geometry so all edges are straight lines
-  system.time(networkDirect <- 
-                makeEdgesDirect(edgesCombined3[[1]],
-                                edgesCombined3[[2]]))
   
-  # add mode to edges, add type to nodes, change cycleway from numbers to text
-  networkRestructured <- restructureData(networkDirect, highway_lookup,defaults_df)
+  networkMode <- addMode(edgesCombined3)
 
   # ensure transport is a directed routeable graph for each mode (i.e., connected
   # subgraph). The first function ensures a connected directed subgraph and the
   # second function ensures a connected subgraph but doesn't consider directionality.
   # We car and bike modes are directed, but walk is undirected.
-  networkNonDisconnected <- largestDirectedNetworkSubgraph(networkRestructured,'car,bike')
+  networkNonDisconnected <- largestDirectedNetworkSubgraph(networkMode,'car,bike')
   networkConnected <- largestNetworkSubgraph(networkNonDisconnected,'walk')
+  
+  # densify the network so that no residential streets are longer than 500m
+  networkDensified <- densifyNetwork(networkConnected,500)
+
+  # simplify geometry so all edges are straight lines
+  system.time(networkDirect <-
+                makeEdgesDirect(networkDensified[[1]],
+                                networkDensified[[2]]))
+  
+  # add mode to edges, add type to nodes, change cycleway from numbers to text
+  networkRestructured <- restructureData(networkDirect, highway_lookup,defaults_df)
+  
   
   if(addElevation) system.time(networkConnected[[1]] <- addElevation2Nodes(networkConnected[[1]], 
                                                                            'data/DEMx10EPSG28355.tif'))
