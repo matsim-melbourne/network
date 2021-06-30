@@ -165,20 +165,29 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   networkRestructured <- restructureData(networkDirect, highway_lookup,defaults_df)
   
   
-  if(addElevation) system.time(networkConnected[[1]] <- addElevation2Nodes(networkConnected[[1]], 
+  if(addElevation) system.time(networkRestructured[[1]] <- addElevation2Nodes(networkRestructured[[1]], 
                                                                            'data/DEMx10EPSG28355.tif'))
+  
+  # # in case we don't have an id column.
+  # if(!"id"%in%colnames(networkRestructured[[2]])) {
+  #   networkRestructured[[2]] <- networkRestructured[[2]] %>%
+  #     mutate(id=paste0("link_",row_number())) %>%
+  #     relocate(id)
+  # }
+  
   if(addGtfs) {
     # read in the study region boundary
     greaterMelbourne <- st_read("data/studyRegion.sqlite",quiet=T) %>%
       st_buffer(10000) %>%
       st_snap_to_grid(1)
-    system.time(networkConnected[[2]] <- addGtfsLinks(outputLocation="./gtfs/",
-                                                      nodes=networkConnected[[1]], 
-                                                      links=networkConnected[[2]],
-                                                      studyRegion=greaterMelbourne)) 
+    system.time(networkRestructured[[2]] <- addGtfsLinks(outputLocation="./gtfs/",
+                                                         nodes=networkRestructured[[1]], 
+                                                         links=networkRestructured[[2]],
+                                                         studyRegion=greaterMelbourne)) 
   }
- 
-  networkFinal <- networkConnected
+  
+  networkFinal <- networkRestructured
+
   
   # writing outputs ---------------------------------------------------------
   message("========================================================")

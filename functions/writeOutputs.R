@@ -176,7 +176,7 @@ exportXML <- function(networkFinal, outputFileName = "outputXML"){
     filter(is_oneway==0) %>% 
     rename(from_id=to_id, to_id=from_id, toX=fromX, toY=fromY, fromX=toX, 
            fromY=toY) %>% 
-    dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
+    dplyr::select(id, from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
                   permlanes, capacity, is_oneway, cycleway, highway, is_cycle, 
                   is_walk, is_car, modes)
   
@@ -186,7 +186,7 @@ exportXML <- function(networkFinal, outputFileName = "outputXML"){
   links <-  fncols(links, c("id","osm_id", "highway", "cycleway", 
                             "bicycleInfrastructureSpeedFactor")) 
   links <- links %>%
-    mutate(id = replace(id, is.na(id), row_number())) %>% 
+    mutate(id = ifelse(is.na(id),row_number(),id)) %>% 
     mutate(type = replace(highway, is.na(highway), "NotSpecified")) %>% 
     mutate(cycleway = replace(cycleway, is.na(cycleway),"No")) %>% 
     mutate(bicycleInfrastructureSpeedFactor = 1) 
