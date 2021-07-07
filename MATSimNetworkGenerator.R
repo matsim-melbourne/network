@@ -52,7 +52,12 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   source('./functions/gtfs2PtNetwork.R')
   source('./functions/writeOutputs.R')
   source('./functions/densifyNetwork.R')
+<<<<<<< HEAD
 
+=======
+  
+  
+>>>>>>> parent of 4146050... Merge branch 'master' into master
   message("========================================================")
   message("                **Launching Network Generation**")
   message("--------------------------------------------------------")
@@ -78,7 +83,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   
   # select from https://github.com/JamesChevalier/cities/tree/master/australia/victoria
   if(crop2TestArea)system.time(networkInput <- crop2Poly(networkInput,
-                                                         "city-of-monash_victoria"))
+                                                         "city-of-melbourne_victoria"))
   
   osm_metadata <- st_read(networkSqlite,layer="osm_metadata",quiet=T) %>%
     filter(osm_id%in%networkInput[[2]]$osm_id)
