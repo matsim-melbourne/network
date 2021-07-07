@@ -1,21 +1,21 @@
 makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F, 
                             addGtfs=F, writeXml=F, writeShp=F, writeSqlite=T,
                             networkSqlite="data/network.sqlite"){
-
-    # crop2TestArea=F; shortLinkLength=20; addElevation=F; addGtfs=F
-    # writeXml=F; writeShp=F; writeSqlite=T; networkSqlite="data/network.sqlite"
-    
-    message("========================================================")
-    message("                **Network Generation Setting**")
-    message("--------------------------------------------------------")
-    message(paste0("- Cropping to a test area:                        ",crop2TestArea))
-    message(paste0("- Shortest link length in network simplification: ", shortLinkLength))
-    message(paste0("- Adding elevation:                               ", addElevation))
-    message(paste0("- Adding PT from GTFS:                            ", addGtfs))
-    message(paste0("- Writing outputs in SQLite format:               ", writeSqlite))
-    message(paste0("- Writing outputs in ShapeFile format:            ", writeShp))
-    message(paste0("- Writing outputs in MATSim XML format:           ", writeXml))
-    message("========================================================")
+  
+  # crop2TestArea=F; shortLinkLength=20; addElevation=F; addGtfs=F
+  # writeXml=F; writeShp=F; writeSqlite=T; networkSqlite="data/network.sqlite"
+  
+  message("========================================================")
+  message("                **Network Generation Setting**")
+  message("--------------------------------------------------------")
+  message(paste0("- Cropping to a test area:                        ",crop2TestArea))
+  message(paste0("- Shortest link length in network simplification: ", shortLinkLength))
+  message(paste0("- Adding elevation:                               ", addElevation))
+  message(paste0("- Adding PT from GTFS:                            ", addGtfs))
+  message(paste0("- Writing outputs in SQLite format:               ", writeSqlite))
+  message(paste0("- Writing outputs in ShapeFile format:            ", writeShp))
+  message(paste0("- Writing outputs in MATSim XML format:           ", writeXml))
+  message("========================================================")
   #libraries
   library(sf)
   library(lwgeom)
@@ -60,16 +60,16 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   message("--------------------------------------------------------")
   
   # Note: writing logical fields to sqlite is a bad idea, so switching to integers
-    networkInput <- list(st_read(networkSqlite,layer="nodes",quiet=T),
-                         st_read(networkSqlite,layer="edges",quiet=T))
-    
-    # We run into trouble if the geometry column is 'geom' instead of 'GEOMETRY'
-    if('GEOMETRY'%in%colnames(networkInput[[1]])) {
-      networkInput[[1]]<-networkInput[[1]]%>%rename(geom=GEOMETRY)
-    }
-    if('GEOMETRY'%in%colnames(networkInput[[2]])) {
-      networkInput[[2]]<-networkInput[[2]]%>%rename(geom=GEOMETRY)
-    }
+  networkInput <- list(st_read(networkSqlite,layer="nodes",quiet=T),
+                       st_read(networkSqlite,layer="edges",quiet=T))
+  
+  # We run into trouble if the geometry column is 'geom' instead of 'GEOMETRY'
+  if('GEOMETRY'%in%colnames(networkInput[[1]])) {
+    networkInput[[1]]<-networkInput[[1]]%>%rename(geom=GEOMETRY)
+  }
+  if('GEOMETRY'%in%colnames(networkInput[[2]])) {
+    networkInput[[2]]<-networkInput[[2]]%>%rename(geom=GEOMETRY)
+  }
   
   cat(paste0("Network input, nodes:\n"))
   str(networkInput[[1]])
@@ -122,14 +122,14 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   # * Non-car edges do NOT count towards the merged lane count (permlanes)
   system.time(edgesCombined <- combineRedundantEdges(intersectionsSimplified[[1]],
                                                      intersectionsSimplified[[2]]))
-
+  
   # Merge one-way and two-way edges going between the same two nodes. In these 
   # cases, the merged attributes will be two-way.
   # This guarantees that there will only be a single edge between any two nodes.
   system.time(combinedUndirectedAndDirected <- 
                 combineUndirectedAndDirectedEdges(edgesCombined[[1]],
                                                   edgesCombined[[2]]))
-
+  
   # If there is a chain of edges between intersections, merge them together
   system.time(edgesSimplified <- simplifyLines(combinedUndirectedAndDirected[[1]],
                                                combinedUndirectedAndDirected[[2]]))
@@ -150,7 +150,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
                                                       edgesSimplified2[[2]]))
   
   networkMode <- addMode(edgesCombined3)
-
+  
   # ensure transport is a directed routeable graph for each mode (i.e., connected
   # subgraph). The first function ensures a connected directed subgraph and the
   # second function ensures a connected subgraph but doesn't consider directionality.
@@ -160,7 +160,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   
   # densify the network so that no residential streets are longer than 500m
   networkDensified <- densifyNetwork(networkConnected,500)
-
+  
   # simplify geometry so all edges are straight lines
   system.time(networkDirect <-
                 makeEdgesDirect(networkDensified[[1]],
@@ -171,7 +171,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   
   
   if(addElevation) system.time(networkRestructured[[1]] <- addElevation2Nodes(networkRestructured[[1]], 
-                                                                           'data/DEMx10EPSG28355.tif'))
+                                                                              'data/DEMx10EPSG28355.tif'))
   
   # # in case we don't have an id column.
   # if(!"id"%in%colnames(networkRestructured[[2]])) {
@@ -192,13 +192,13 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   }
   
   networkFinal <- networkRestructured
-
+  
   
   # writing outputs ---------------------------------------------------------
   message("========================================================")
   message("|               **Launching Output Writing**           |")
   message("--------------------------------------------------------")
-
+  
   if(writeSqlite) system.time(exportSQlite(networkFinal, outputFileName = "MATSimMelbNetwork"))
   if(writeShp) system.time(exportShp(networkFinal, outputFileName = "MATSimMelbNetwork"))
   if(writeXml) system.time(exportXML(networkFinal, outputFileName = "MATSimMelbNetwork")) # uncomment if you want xml output

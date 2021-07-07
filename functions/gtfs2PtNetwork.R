@@ -176,6 +176,7 @@ processGtfs <- function(outputLocation="./test/",
     group_by(id,x,y) %>%
     slice_head() %>%
     ungroup()
+
   validStopTimesSnappedFinal <- validStopTimesSnapped %>%
     dplyr::select(-stop_id) %>%
     rename(stop_id=id)
