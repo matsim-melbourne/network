@@ -51,7 +51,8 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   source('./functions/addElevation2Nodes.R')
   source('./functions/gtfs2PtNetwork.R')
   source('./functions/writeOutputs.R')
-    
+  source('./functions/densifyNetwork.R')
+  
   
   message("========================================================")
   message("                **Launching Network Generation**")
@@ -142,33 +143,51 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
                                                 combinedUndirectedAndDirected2[[2]]))
   system.time(edgesCombined3 <- combineRedundantEdges(edgesSimplified2[[1]],
                                                       edgesSimplified2[[2]]))
+  
+  networkMode <- addMode(edgesCombined3)
+
+  # ensure transport is a directed routeable graph for each mode (i.e., connected
+  # subgraph). The first function ensures a connected directed subgraph and the
+  # second function ensures a connected subgraph but doesn't consider directionality.
+  # We car and bike modes are directed, but walk is undirected.
+  networkNonDisconnected <- largestDirectedNetworkSubgraph(networkMode,'car,bike')
+  networkConnected <- largestNetworkSubgraph(networkNonDisconnected,'walk')
+  
+  # densify the network so that no residential streets are longer than 500m
+  networkDensified <- densifyNetwork(networkConnected,500)
+
   # simplify geometry so all edges are straight lines
-  system.time(networkDirect <- 
-                makeEdgesDirect(edgesCombined3[[1]],
-                                edgesCombined3[[2]]))
+  system.time(networkDirect <-
+                makeEdgesDirect(networkDensified[[1]],
+                                networkDensified[[2]]))
   
   # add mode to edges, add type to nodes, change cycleway from numbers to text
   networkRestructured <- restructureData(networkDirect, highway_lookup,defaults_df)
-
-  # ensure transport is a directed routeable graph by first removing disconnected
-  # directed links, and then ensuring the subgraph for each mode is connected
-  networkNonDisconnected <- removeDisconnectedLinks(networkRestructured,'car,bike')
-  networkConnected <- cleanNetworkSubgraph(networkNonDisconnected,'walk,car,bike')
   
-  if(addElevation) system.time(networkConnected[[1]] <- addElevation2Nodes(networkConnected[[1]], 
+  
+  if(addElevation) system.time(networkRestructured[[1]] <- addElevation2Nodes(networkRestructured[[1]], 
                                                                            'data/DEMx10EPSG28355.tif'))
+  
+  # # in case we don't have an id column.
+  # if(!"id"%in%colnames(networkRestructured[[2]])) {
+  #   networkRestructured[[2]] <- networkRestructured[[2]] %>%
+  #     mutate(id=paste0("link_",row_number())) %>%
+  #     relocate(id)
+  # }
+  
   if(addGtfs) {
     # read in the study region boundary
     greaterMelbourne <- st_read("data/studyRegion.sqlite",quiet=T) %>%
       st_buffer(10000) %>%
       st_snap_to_grid(1)
-    system.time(networkConnected[[2]] <- addGtfsLinks(outputLocation="./gtfs/",
-                                                      nodes=networkConnected[[1]], 
-                                                      links=networkConnected[[2]],
-                                                      studyRegion=greaterMelbourne)) 
+    system.time(networkRestructured[[2]] <- addGtfsLinks(outputLocation="./gtfs/",
+                                                         nodes=networkRestructured[[1]], 
+                                                         links=networkRestructured[[2]],
+                                                         studyRegion=greaterMelbourne)) 
   }
- 
-  networkFinal <- networkConnected
+  
+  networkFinal <- networkRestructured
+
   
   # writing outputs ---------------------------------------------------------
   message("========================================================")
