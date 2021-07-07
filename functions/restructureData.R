@@ -1,8 +1,8 @@
 # networkAttributed=networkDirect
-restructureData <- function(networkDirect, highway_lookup, defaults_df){
+restructureData <- function(networkList, highway_lookup, defaults_df){
   
-  nodes <- networkDirect[[1]]
-  links <- networkDirect[[2]]
+  nodes <- networkList[[1]]
+  links <- networkList[[2]]
   
   links <- links %>% 
     mutate(uid=row_number()) 
@@ -65,7 +65,10 @@ restructureData <- function(networkDirect, highway_lookup, defaults_df){
     mutate(cycleway=ifelse(cycleway==0, NA              , cycleway)) %>%
     dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
                   permlanes, capacity, highway, is_oneway, cycleway, is_cycle, is_walk,
-                  is_car, modes)
+                  is_car, modes) %>%
+    mutate(id=NA) %>%
+    # mutate(id=paste0("link_",row_number())) %>%
+    relocate(id)
   
   return(list(nodes,links))
 }

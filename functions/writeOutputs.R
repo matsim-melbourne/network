@@ -171,6 +171,9 @@ exportXML <- function(networkFinal, outputFileName = "outputXML"){
   
   # Links -------------------------------------------------------------------
   if(class(links)[1]=="sf") links <- st_drop_geometry(links)
+  # Adding empty id column if doesn't exist
+  if(!("id" %in% colnames(links))) links <- links %>% mutate(id=NA)
+  
   # Adding a reverse links for bi-directionals
   bi_links <- links %>% 
     filter(is_oneway==0) %>% 
@@ -187,7 +190,7 @@ exportXML <- function(networkFinal, outputFileName = "outputXML"){
   links <-  fncols(links, c("id","osm_id", "highway", "cycleway", 
                             "bicycleInfrastructureSpeedFactor")) 
   links <- links %>%
-    mutate(id = replace(id, is.na(id), row_number())) %>% 
+    mutate(id = ifelse(is.na(id),row_number(),id)) %>% 
     mutate(type = replace(highway, is.na(highway), "NotSpecified")) %>% 
     mutate(cycleway = replace(cycleway, is.na(cycleway),"No")) %>% 
     mutate(bicycleInfrastructureSpeedFactor = 1) 
