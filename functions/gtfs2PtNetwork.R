@@ -38,6 +38,63 @@ addGtfsLinks <- function(outputLocation="./test/",
     stops<-stops%>%rename(geom=GEOMETRY)
   }
   
+  # incorporating SRL -------------------------------------------------------
+  
+  # requires file 'srl_stg1.sqlite', in EPSG:28355 - GDA 94 / MGA zone 55, containing two layers:
+  #  - stations (point), with a 'sequence' field listing order of stations along line from one end to other
+  #  - lines (linestring), containing separate line features each joining two adjacent stations 
+  
+  # read in SRL stations and lines
+  stations <- st_read("data/srl_stg1.sqlite",layer="stations")
+  lines <- st_read("data/srl_stg1.sqlite",layer="lines")
+  
+  # validRoadNodes <- st_read("data/validRoadNodes.sqlite", layer="validroadnodes")
+  
+  # set parameters for timetable 
+  HOURS <- c("05:00:00", "24:00:00")  # start and end of timetable period
+  INTERVAL <- 600  # 600 seconds, ie. 10 minutes  or, if using peak: c(600, 240, 600, 240, 600)
+  SPEED <- 60  # km/h
+  ROUTEIDs <- c("SRL1", "SRL2")  # identifiers for distinct service patterns (one in each direction)
+  SERVICEID <- "SRL0"  # identifier for distinct set of dates when services operate
+  SERVICETYPE <- "train"  # alternatively, "SRL" to distinguish from other trains, but would require changes in export functions
+  
+  ## alternative for HOURS and INTERVAL allowing different intervals in peak periods
+  ## note must be one interval for each span of hours, so length of INTERVAL must be one less than length of HOURS 
+  # HOURS <- c("05:00:00", "07:00:00", "09:00:00", "16:00:00", "18:00:00", "24:00:00")
+  # INTERVAL <- c(600, 240, 600, 240, 600)  # 4 mins in peak periods; otherwise 10 mins
+  
+  processSrl(
+    outputLocation = outputLocation,
+    stations = stations,
+    lines = lines,
+    validRoadNodes = validRoadNodes,
+    HOURS = HOURS,
+    INTERVAL = INTERVAL,
+    SPEED = SPEED,
+    ROUTEIDs = ROUTEIDs,
+    SERVICEID = SERVICEID,
+    SERVICETYPE = SERVICETYPE)
+  
+  
+  # read the outputs
+  srlStops <- st_read(paste0(outputLocation,"srlStops.sqlite"),quiet=T)
+  srlStopTimes <- readRDS(paste0(outputLocation,"srlStopTimes.rds"))
+  srlTrips <- readRDS(paste0(outputLocation,"srlTrips.rds"))
+  srlRoutes <- readRDS(paste0(outputLocation,"srlRoutes.rds"))
+  
+  # ensure geometry column is 'geom' instead of 'GEOMETRY'
+  if('GEOMETRY'%in%colnames(srlStops)) {
+    srlStops<-srlStops%>%rename(geom=GEOMETRY)
+  }
+  
+  # combine with the GTFS outputs, ready for export to XML
+  stops <- bind_rows(stops, srlStops) %>% distinct()
+  stopTimes <- bind_rows(stopTimes, srlStopTimes)
+  trips <- bind_rows(trips, srlTrips)
+  routes <- bind_rows(routes, srlRoutes)
+  # end of SRL section -------------------------------------------------------
+  
+  
   # return the edges in the PT network as well as write the
   # transitVehicles.xml and transitSchedule.xml files
   edgesCombined <- exportGtfsSchedule(
@@ -246,7 +303,7 @@ exportGtfsSchedule <- function(links,
     dplyr::select(trip_id,route_id_new,departure_id,departure_time=arrival_time) %>%
     arrange(route_id_new,departure_id) %>%
     as.data.frame()
-
+  
   ptNetwork_StopsAndEdges <- ptNetwork %>%
     dplyr::select(from_id,to_id,from_x,from_y,to_x,to_y) %>%
     distinct() %>%
@@ -264,8 +321,8 @@ exportGtfsSchedule <- function(links,
     inner_join(ptNetwork_StopsAndEdges%>%st_drop_geometry()%>%dplyr::select(from_id,to_id,stop_id,link_id),
                by=c("from_id","to_id")) %>%
     dplyr::select(route_id_new,arrivalOffset,departureOffset,stop_id,link_id)
-    
-
+  
+  
   # making tables for XML
   
   # ./data/transitVehicles.xml: vehicle
@@ -322,7 +379,7 @@ exportGtfsSchedule <- function(links,
   # transitVehicles
   cat(
     "<?xml version=\"1.0\" ?>
-<vehicleDefinitions xmlns=\"http://www.matsim.org/files/dtd\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.matsim.org/files/dtd http://www.matsim.org/files/dtd/vehicleDefinitions_v1.0.xsd\">\n",
+    <vehicleDefinitions xmlns=\"http://www.matsim.org/files/dtd\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.matsim.org/files/dtd http://www.matsim.org/files/dtd/vehicleDefinitions_v1.0.xsd\">\n",
     file=outxml,append=FALSE)
   str<-""
   writeInterval<-500
@@ -369,7 +426,7 @@ exportGtfsSchedule <- function(links,
   
   echo("writing transitStops\n")
   for (i in 1:nrow(transitStops)) {
-  # for (i in 1:100) {
+    # for (i in 1:100) {
     str<-paste0(str,
                 "    <stopFacility id=\"",transitStops[i,]$stop_id,"\" isBlocking=\"false\" linkRefId=\"",
                 transitStops[i,]$linkRefId,"\" x=\"",transitStops[i,]$x,"\" y=\"",transitStops[i,]$y,"\"/>\n")
@@ -383,7 +440,7 @@ exportGtfsSchedule <- function(links,
   }
   cat(paste0("  </transitStops>\n"),file=outxml,append=TRUE)
   cat(paste0("  <transitLine id=\"Melbourne\">\n"),file=outxml,append=TRUE)
-
+  
   echo("writing vehicleTripMatching\n")
   str<-""
   writeInterval<-100
@@ -434,8 +491,8 @@ exportGtfsSchedule <- function(links,
       str<-paste0(str,"      <route>\n")
       for (j in 1:nrow(routeProfileCurrent)) {
         str<-paste0(str,"        <link refId=\"",
-                   routeProfileCurrent[j,]$linkRefId,
-                   "\"/>\n")
+                    routeProfileCurrent[j,]$linkRefId,
+                    "\"/>\n")
       }
       str<-paste0(str,"      </route>\n")
       
