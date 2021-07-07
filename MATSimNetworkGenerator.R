@@ -52,7 +52,8 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   source('./functions/gtfs2PtNetwork.R')
   source('./functions/writeOutputs.R')
   source('./functions/densifyNetwork.R')
-  
+  source('./functions/osmMetaCorrection.R')
+    
   
   message("========================================================")
   message("                **Launching Network Generation**")
@@ -86,6 +87,10 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   defaults_df <- buildDefaultsDF()
   highway_lookup <- defaults_df %>% dplyr::select(highway, highway_order)
   system.time( osmAttributes <- processOsmTags(osm_metadata,defaults_df))
+  
+  # There are some roads in OSM that are not correctly attributed
+  # Use the function below to manually add their attributes based osm id
+  osmAttributesCorrected <- osmMetaCorrection(osmAttributes)
   
   edgesAttributed <- networkInput[[2]] %>%
     inner_join(osmAttributes, by="osm_id") %>%
