@@ -137,6 +137,8 @@ simplifyLines <- function(nodes,edges){
               is_oneway=max(is_oneway,na.rm=T),
               cycleway=max(cycleway,na.rm=T),
               highway_order=min(highway_order,na.rm=T), # selecting the highest rank
+              # surface=surface[which.max(length[!is.na(surface)])], # Take the max length surface type
+              surface=surface[which.max(length)], # Take the max length surface type
               is_cycle=max(is_cycle,na.rm=T),is_walk=max(is_walk,na.rm=T),
               is_car=max(is_car,na.rm=T),geom=st_combine(geom)) %>%
     st_sf() %>%

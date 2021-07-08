@@ -64,8 +64,8 @@ restructureData <- function(networkList, highway_lookup, defaults_df){
     mutate(cycleway=ifelse(cycleway==1, "shared_lane"   , cycleway)) %>%
     mutate(cycleway=ifelse(cycleway==0, NA              , cycleway)) %>%
     dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
-                  permlanes, capacity, highway, is_oneway, cycleway, is_cycle, is_walk,
-                  is_car, modes) %>%
+                  permlanes, capacity, highway, is_oneway, cycleway, surface, 
+                  is_cycle, is_walk, is_car, modes) %>%
     mutate(id=NA) %>%
     # mutate(id=paste0("link_",row_number())) %>%
     relocate(id)
