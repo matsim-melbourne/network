@@ -122,7 +122,6 @@ exportXML <- function(networkFinal, outputFileName = "outputXML"){
                         this_link$type, "</attribute>\n",
                         "        <attribute name=\"cycleway\" class=\"java.lang.String\">", 
                         this_link$cycleway, "</attribute>\n",
-                        this_link$type, "</attribute>\n",
                         "        <attribute name=\"surface\" class=\"java.lang.String\">", 
                         this_link$surface, "</attribute>\n",
                         "        <attribute name=\"bicycleInfrastructureSpeedFactor\" class=\"java.lang.String\">", 
