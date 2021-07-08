@@ -198,8 +198,8 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   message("|               **Launching Output Writing**           |")
   message("--------------------------------------------------------")
   
-  if(writeSqlite) system.time(exportSQlite(networkFinal, outputFileName = "network_v1.2"))
-  if(writeShp) system.time(exportShp(networkFinal, outputFileName = "network_v1.2"))
-  if(writeXml) system.time(exportXML(networkFinal, outputFileName = "network_v1.2")) 
+  if(writeSqlite) system.time(exportSQlite(networkFinal, outputFileName = "MATSimMelbNetwork"))
+  if(writeShp) system.time(exportShp(networkFinal, outputFileName = "MATSimMelbNetwork"))
+  if(writeXml) system.time(exportXML(networkFinal, outputFileName = "MATSimMelbNetwork")) 
 }
 
