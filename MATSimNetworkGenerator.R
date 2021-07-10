@@ -52,6 +52,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   source('./functions/gtfs2PtNetwork.R')
   source('./functions/writeOutputs.R')
   source('./functions/densifyNetwork.R')
+  source('./functions/srl2PtNetwork.R')
   
   
   message("========================================================")
@@ -180,7 +181,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
     greaterMelbourne <- st_read("data/studyRegion.sqlite",quiet=T) %>%
       st_buffer(10000) %>%
       st_snap_to_grid(1)
-    system.time(networkRestructured[[2]] <- addGtfsLinks(outputLocation="./gtfs/",
+    system.time(networkRestructured[[2]] <- addGtfsLinks(outputLocation="./gtfs_srl/",
                                                          nodes=networkRestructured[[1]], 
                                                          links=networkRestructured[[2]],
                                                          studyRegion=greaterMelbourne)) 
@@ -194,8 +195,8 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   message("|               **Launching Output Writing**           |")
   message("--------------------------------------------------------")
   
-  if(writeSqlite) system.time(exportSQlite(networkFinal, outputFileName = "MATSimMelbNetwork"))
-  if(writeShp) system.time(exportShp(networkFinal, outputFileName = "MATSimMelbNetwork"))
-  if(writeXml) system.time(exportXML(networkFinal, outputFileName = "MATSimMelbNetwork")) # uncomment if you want xml output
+  if(writeSqlite) system.time(exportSQlite(networkFinal, outputFileName = "MATSimMelbNetwork_SRL"))
+  if(writeShp) system.time(exportShp(networkFinal, outputFileName = "MATSimMelbNetwork_SRL"))
+  if(writeXml) system.time(exportXML(networkFinal, outputFileName = "MATSimMelbNetwork_SRL")) # uncomment if you want xml output
 }
 

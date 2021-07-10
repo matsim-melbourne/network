@@ -38,6 +38,63 @@ addGtfsLinks <- function(outputLocation="./test/",
     stops<-stops%>%rename(geom=GEOMETRY)
   }
   
+  
+  # incorporating SRL -------------------------------------------------------
+  
+  # requires file 'srl_stg1.sqlite', in EPSG:28355 - GDA 94 / MGA zone 55, containing two layers:
+  #  - stations (point), with a 'sequence' field listing order of stations along line from one end to other
+  #  - lines (linestring), containing separate line features each joining two adjacent stations 
+  
+  # read in SRL stations and lines
+  stations <- st_read("data/srl_stg1.sqlite",layer="stations")
+  lines <- st_read("data/srl_stg1.sqlite",layer="lines")
+  
+  # validRoadNodes <- st_read("data/validRoadNodes.sqlite", layer="validroadnodes")
+  
+  # set parameters for timetable 
+  HOURS <- c("05:00:00", "24:00:00")  # start and end of timetable period
+  INTERVAL <- 600  # 600 seconds, ie. 10 minutes  or, if using peak: c(600, 240, 600, 240, 600)
+  SPEED <- 60  # km/h
+  ROUTEIDs <- c("SRL1", "SRL2")  # identifiers for distinct service patterns (one in each direction)
+  SERVICEID <- "SRL0"  # identifier for distinct set of dates when services operate
+  SERVICETYPE <- "train"  # alternatively, "SRL" to distinguish from other trains, but would require changes in export functions
+  
+  ## alternative for HOURS and INTERVAL allowing different intervals in peak periods
+  ## note must be one interval for each span of hours, so length of INTERVAL must be one less than length of HOURS 
+  # HOURS <- c("05:00:00", "07:00:00", "09:00:00", "16:00:00", "18:00:00", "24:00:00")
+  # INTERVAL <- c(600, 240, 600, 240, 600)  # 4 mins in peak periods; otherwise 10 mins
+  
+  processSrl(
+    outputLocation = outputLocation,
+    stations = stations,
+    lines = lines,
+    validRoadNodes = validRoadNodes,
+    HOURS = HOURS,
+    INTERVAL = INTERVAL,
+    SPEED = SPEED,
+    ROUTEIDs = ROUTEIDs,
+    SERVICEID = SERVICEID,
+    SERVICETYPE = SERVICETYPE)
+  
+  
+  # read the outputs
+  srlStops <- st_read(paste0(outputLocation,"srlStops.sqlite"),quiet=T)
+  srlStopTimes <- readRDS(paste0(outputLocation,"srlStopTimes.rds"))
+  srlTrips <- readRDS(paste0(outputLocation,"srlTrips.rds"))
+  srlRoutes <- readRDS(paste0(outputLocation,"srlRoutes.rds"))
+  
+  # ensure geometry column is 'geom' instead of 'GEOMETRY'
+  if('GEOMETRY'%in%colnames(srlStops)) {
+    srlStops<-srlStops%>%rename(geom=GEOMETRY)
+  }
+  
+  # combine with the GTFS outputs, ready for export to XML
+  stops <- bind_rows(stops, srlStops) %>% distinct()
+  stopTimes <- bind_rows(stopTimes, srlStopTimes)
+  trips <- bind_rows(trips, srlTrips)
+  routes <- bind_rows(routes, srlRoutes)
+  # end of SRL section -------------------------------------------------------
+  
   # return the edges in the PT network as well as write the
   # transitVehicles.xml and transitSchedule.xml files
   edgesCombined <- exportGtfsSchedule(
