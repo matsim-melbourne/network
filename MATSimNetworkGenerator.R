@@ -48,7 +48,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   source('./functions/removeDangles.R')
   source('./functions/makeEdgesDirect.R')
   source('./functions/restructureData.R')
-  source('./functions/addElevation2Nodes.R')
+  source('./functions/addElevation.R')
   source('./functions/gtfs2PtNetwork.R')
   source('./functions/writeOutputs.R')
   source('./functions/densifyNetwork.R')
@@ -171,7 +171,8 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   
   
   if(addElevation) system.time(networkRestructured[[1]] <- addElevation2Nodes(networkRestructured[[1]], 
-                                                                           'data/DEMx10EPSG28355.tif'))
+                                                                           'data/DEMx10EPSG28355.tif',
+                                                                           elevationMultiplier=10))
   
   # # in case we don't have an id column.
   # if(!"id"%in%colnames(networkRestructured[[2]])) {
