@@ -170,10 +170,12 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   networkRestructured <- restructureData(networkDirect, highway_lookup,defaults_df)
   
   
-  if(addElevation) system.time(networkRestructured[[1]] <- addElevation2Nodes(networkRestructured[[1]], 
-                                                                           'data/DEMx10EPSG28355.tif',
-                                                                           elevationMultiplier=10))
-  
+  if(addElevation){ 
+    networkRestructured[[1]] <- addElevation2Nodes(networkRestructured[[1]], 
+                                                   'data/DEMx10EPSG28355.tif',
+                                                   multiplier=10)
+    networkRestructured[[2]] <- addElevation2Links(networkRestructured)
+  }
   # # in case we don't have an id column.
   # if(!"id"%in%colnames(networkRestructured[[2]])) {
   #   networkRestructured[[2]] <- networkRestructured[[2]] %>%
