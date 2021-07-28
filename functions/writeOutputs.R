@@ -124,6 +124,8 @@ exportXML <- function(networkFinal, outputFileName = "outputXML"){
                         this_link$cycleway, "</attribute>\n",
                         "        <attribute name=\"surface\" class=\"java.lang.String\">", 
                         this_link$surface, "</attribute>\n",
+                        "        <attribute name=\"slopePct\" class=\"java.lang.String\">", 
+                        this_link$slope, "</attribute>\n",
                         "        <attribute name=\"bicycleInfrastructureSpeedFactor\" class=\"java.lang.String\">", 
                         this_link$bicycleInfrastructureSpeedFactor, "</attribute>\n",
                         "    </attributes>\n",
@@ -175,27 +177,33 @@ exportXML <- function(networkFinal, outputFileName = "outputXML"){
   if(class(links)[1]=="sf") links <- st_drop_geometry(links)
   # Adding empty id column if doesn't exist
   if(!("id" %in% colnames(links))) links <- links %>% mutate(id=NA)
+  if(!("fwd_slope_pct" %in% colnames(links))) links <- links %>% mutate(fwd_slope_pct=NA, rvs_slope_pct=NA)
   
   # Adding a reverse links for bi-directionals
   bi_links <- links %>% 
     filter(is_oneway==0) %>% 
     rename(from_id=to_id, to_id=from_id, toX=fromX, toY=fromY, fromX=toX, 
-           fromY=toY) %>% 
+           fromY=toY, slope=rvs_slope_pct) %>% 
     mutate(id=NA) %>%
     dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
                   permlanes, capacity, is_oneway, cycleway, highway, surface, 
-                  is_cycle, is_walk, is_car, modes, id)
+                  slope, is_cycle, is_walk, is_car, modes, id)
   
-  links <- rbind(links, bi_links) 
+  links <- rbind( 
+    {links %>% dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
+                             permlanes, capacity, is_oneway, cycleway, highway, surface, 
+                             slope=fwd_slope_pct, is_cycle, is_walk, is_car, modes, id)},
+    bi_links) 
   
   # Adding bicycle and extra information
-  links <-  fncols(links, c("id","osm_id", "highway", "cycleway", 
+  links <-  fncols(links, c("id","osm_id", "highway", "cycleway","slope", 
                             "bicycleInfrastructureSpeedFactor")) 
   links <- links %>%
     mutate(id = ifelse(is.na(id),row_number(),id)) %>% 
     mutate(type = replace(highway, is.na(highway), "NotSpecified")) %>% 
     mutate(surface = ifelse(is.na(surface),"asphalt",surface)) %>% 
     mutate(cycleway = replace(cycleway, is.na(cycleway),"No")) %>% 
+    mutate(slope = replace(slope, is.na(slope),"NA")) %>% 
     mutate(bicycleInfrastructureSpeedFactor = 1) 
   # Adding links
   echo('\n')
