@@ -1,9 +1,13 @@
-# Bike hierarchy:
-# bikepath           = 4
-# seperated_lane     = 3
-# lane               = 2
-# shared_lane        = 1
-# no_lane/no_cycling = 0
+#########################################################
+# OSM TAG         | Network Name       | Bike hierarchy |
+#-----------------|--------------------|----------------|
+# cycleway        | bikepath           | 5              |
+# cycleway + walk | shared_path        | 4              | 
+# track           | seperated_lane     | 3              |
+# lane            | simple_lane        | 2              |
+# shared_lane     | shared_street      | 1              |
+# -               | no lane/track/path | 0              |
+#########################################################
 
 processOsmTags <- function(osm_df,this_defaults_df){
   # osm_df <- osm_metadata
@@ -68,6 +72,7 @@ processOsmTags <- function(osm_df,this_defaults_df){
       if(any(cycleway_tags=="shared_lane")) df$cycleway[1]=1
       if(any(cycleway_tags=="lane") & df$highway[1]!="cycleway") df$cycleway[1]=2
       if(any(cycleway_tags=="track")& df$highway[1]!="cycleway") df$cycleway[1]=3
+      if(any(foot_tags=="no")& df$highway[1]=="cycleway") df$cycleway[1]=5
       if(any(car_tags=="no")) df$is_car[1]=0
       if(any(foot_tags=="no")) df$is_walk[1]=0
       if(any(foot_tags %in% c("yes","designated"))) df$is_walk[1]=1

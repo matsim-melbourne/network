@@ -58,10 +58,11 @@ restructureData <- function(networkList, highway_lookup, defaults_df){
     mutate(modes=ifelse( !is.na(modes)&is_walk==1,    paste(modes,"walk",sep=","), modes)) %>%
     mutate(modes=ifelse(  is.na(modes)&is_walk==1,                         "walk", modes)) %>%
     # convert cycleway from numbers to text
-    mutate(cycleway=ifelse(cycleway==4, "bikepath"      , cycleway)) %>%
+    mutate(cycleway=ifelse(cycleway==5, "bikepath"      , cycleway)) %>%
+    mutate(cycleway=ifelse(cycleway==4, "shared_path"   , cycleway)) %>%
     mutate(cycleway=ifelse(cycleway==3, "seperated_lane", cycleway)) %>%
-    mutate(cycleway=ifelse(cycleway==2, "lane"          , cycleway)) %>%
-    mutate(cycleway=ifelse(cycleway==1, "shared_lane"   , cycleway)) %>%
+    mutate(cycleway=ifelse(cycleway==2, "simple_lane"   , cycleway)) %>%
+    mutate(cycleway=ifelse(cycleway==1, "shared_street" , cycleway)) %>%
     mutate(cycleway=ifelse(cycleway==0, NA              , cycleway)) %>%
     dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
                   permlanes, capacity, highway, is_oneway, cycleway, surface, 
