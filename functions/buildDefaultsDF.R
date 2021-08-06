@@ -21,13 +21,13 @@ buildDefaultsDF <- function(){
      "living_street"  ,  1        ,  (40/3.6) ,  0        ,   300        ,  1       ,  1      ,  1     , 14            ,
      "cycleway"       ,  1        ,  (30/3.6) ,  0        ,   300        ,  1       ,  0      ,  0     , 15            ,
      "track"          ,  1        ,  (30/3.6) ,  0        ,   300        ,  1       ,  0      ,  0     , 16            ,
-     "service"        ,  1        ,  (40/3.6) ,  0        ,   200        ,  1       ,  1      ,  1     , 17            ,
+     "service"        ,  1        ,  (40/3.6) ,  0        ,   300        ,  1       ,  1      ,  1     , 17            ,
 
      "pedestrian"     ,  1        ,  (30/3.6) ,  0        ,   120        ,  0       ,  1      ,  0     , 18            ,
-     "footway"        ,  1        ,  (15/3.6) ,  0        ,   120        ,  0       ,  1      ,  0     , 19            ,
-     "path"           ,  1        ,  (15/3.6) ,  0        ,   120        ,  0       ,  1      ,  0     , 20            ,
-     "corridor"       ,  1        ,  (15/3.6) ,  0        ,    50        ,  0       ,  1      ,  0     , 21            ,
-     "steps"          ,  1        ,  (15/3.6) ,  0        ,    10        ,  0       ,  1      ,  0     , 22
+     "footway"        ,  1        ,  (10/3.6) ,  0        ,   120        ,  0       ,  1      ,  0     , 19            ,
+     "path"           ,  1        ,  (10/3.6) ,  0        ,   120        ,  0       ,  1      ,  0     , 20            ,
+     "corridor"       ,  1        ,  (10/3.6) ,  0        ,    50        ,  0       ,  1      ,  0     , 21            ,
+     "steps"          ,  1        ,  (10/3.6) ,  0        ,    10        ,  0       ,  1      ,  0     , 22
   )
   message("Using default road attribute values in Australia, source https://github.com/agentsoz/bdi-abm-integration/blob/master/util/src/main/java/io/github/agentsoz/util/NetworkGenerator.java#L90-L163. Edit buildDefaults.R function if other values are desired for other countries.")
   
