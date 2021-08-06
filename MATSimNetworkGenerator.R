@@ -2,8 +2,8 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
                             addGtfs=F, writeXml=F, writeShp=F, writeSqlite=T,
                             networkSqlite="data/network.sqlite"){
   
-  crop2TestArea=F; shortLinkLength=20; addElevation=F; addGtfs=T
-  writeXml=T; writeShp=F; writeSqlite=T; networkSqlite="data/network_2019.sqlite"
+  # crop2TestArea=F; shortLinkLength=20; addElevation=F; addGtfs=T
+  # writeXml=T; writeShp=F; writeSqlite=T; networkSqlite="data/network.sqlite"
   
   echo("========================================================")
   echo("                **Network Generation Setting**")
