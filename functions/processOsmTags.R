@@ -60,8 +60,8 @@ processOsmTags <- function(osm_df,this_defaults_df){
         # some osm tags set the number of lanes to zero
         # added is.na since one of the lanes has a value of "2; 3"
         if(!is.na(newLanes) & newLanes > 0) {
-          # recalibrating the laneCapacity
-          df$laneCapacity[1]= df$laneCapacity[1] * (newLanes/df$permlanes[1])
+          # Lane capacity is per lane and should not be adjusted based on number of lanes
+          # df$laneCapacity[1]= df$laneCapacity[1] * (newLanes/df$permlanes[1])
           df$permlanes[1]=newLanes
         }
       }
