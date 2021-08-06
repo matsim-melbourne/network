@@ -54,6 +54,17 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   source('./functions/densifyNetwork.R')
   source('./functions/osmMetaCorrection.R')
     
+  echo("========================================================")
+  echo("                **Network Generation Setting**")
+  echo("--------------------------------------------------------")
+  echo(paste0("- Cropping to a test area:                        ",crop2TestArea))
+  echo(paste0("- Shortest link length in network simplification: ", shortLinkLength))
+  echo(paste0("- Adding elevation:                               ", addElevation))
+  echo(paste0("- Adding PT from GTFS:                            ", addGtfs))
+  echo(paste0("- Writing outputs in SQLite format:               ", writeSqlite))
+  echo(paste0("- Writing outputs in ShapeFile format:            ", writeShp))
+  echo(paste0("- Writing outputs in MATSim XML format:           ", writeXml))
+  echo("========================================================")
   
   echo("========================================================")
   echo("                **Launching Network Generation**")
