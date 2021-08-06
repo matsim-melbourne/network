@@ -1,5 +1,6 @@
 # networkAttributed=networkDirect
-restructureData <- function(networkList, highway_lookup, defaults_df){
+restructureData <- function(networkList, highway_lookup, 
+                            defaults_df, adjustCapacity=F){
   
   nodes <- networkList[[1]]
   links <- networkList[[2]]
@@ -68,8 +69,7 @@ restructureData <- function(networkList, highway_lookup, defaults_df){
                   permlanes, capacity, highway, is_oneway, cycleway, surface, 
                   is_cycle, is_walk, is_car, modes) %>%
     mutate(id=NA) %>%
-    # mutate(id=paste0("link_",row_number())) %>%
     relocate(id)
-  
+
   return(list(nodes,links))
 }

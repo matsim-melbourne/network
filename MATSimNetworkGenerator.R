@@ -2,20 +2,20 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
                             addGtfs=F, writeXml=F, writeShp=F, writeSqlite=T,
                             networkSqlite="data/network.sqlite"){
   
-  # crop2TestArea=F; shortLinkLength=20; addElevation=F; addGtfs=T
-  # writeXml=T; writeShp=F; writeSqlite=T; networkSqlite="data/network.sqlite"
+  crop2TestArea=F; shortLinkLength=20; addElevation=F; addGtfs=T
+  writeXml=T; writeShp=F; writeSqlite=T; networkSqlite="data/network_2019.sqlite"
   
-  message("========================================================")
-  message("                **Network Generation Setting**")
-  message("--------------------------------------------------------")
-  message(paste0("- Cropping to a test area:                        ",crop2TestArea))
-  message(paste0("- Shortest link length in network simplification: ", shortLinkLength))
-  message(paste0("- Adding elevation:                               ", addElevation))
-  message(paste0("- Adding PT from GTFS:                            ", addGtfs))
-  message(paste0("- Writing outputs in SQLite format:               ", writeSqlite))
-  message(paste0("- Writing outputs in ShapeFile format:            ", writeShp))
-  message(paste0("- Writing outputs in MATSim XML format:           ", writeXml))
-  message("========================================================")
+  echo("========================================================")
+  echo("                **Network Generation Setting**")
+  echo("--------------------------------------------------------")
+  echo(paste0("- Cropping to a test area:                        ",crop2TestArea))
+  echo(paste0("- Shortest link length in network simplification: ", shortLinkLength))
+  echo(paste0("- Adding elevation:                               ", addElevation))
+  echo(paste0("- Adding PT from GTFS:                            ", addGtfs))
+  echo(paste0("- Writing outputs in SQLite format:               ", writeSqlite))
+  echo(paste0("- Writing outputs in ShapeFile format:            ", writeShp))
+  echo(paste0("- Writing outputs in MATSim XML format:           ", writeXml))
+  echo("========================================================")
   #libraries
   library(sf)
   library(lwgeom)
@@ -55,9 +55,9 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   source('./functions/osmMetaCorrection.R')
     
   
-  message("========================================================")
-  message("                **Launching Network Generation**")
-  message("--------------------------------------------------------")
+  echo("========================================================")
+  echo("                **Launching Network Generation**")
+  echo("--------------------------------------------------------")
   
   # Note: writing logical fields to sqlite is a bad idea, so switching to integers
     networkInput <- list(st_read(networkSqlite,layer="nodes",quiet=T),
@@ -159,7 +159,8 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   networkConnected <- largestNetworkSubgraph(networkNonDisconnected,'walk')
   
   # densify the network so that no residential streets are longer than 500m
-  networkDensified <- densifyNetwork(networkConnected,500)
+  desnificationMaxLengh=500
+  networkDensified <- densifyNetwork(networkConnected,desnificationMaxLengh)
 
   # simplify geometry so all edges are straight lines
   system.time(networkDirect <-
@@ -167,39 +168,63 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
                                 networkDensified[[2]]))
   
   # add mode to edges, add type to nodes, change cycleway from numbers to text
-  networkRestructured <- restructureData(networkDirect, highway_lookup,defaults_df)
+  networkRestructured <- restructureData(networkDirect, highway_lookup,
+                                         defaults_df)
   
+  # Doubling capacity for small road segments to avoid bottlenecks
+  # Set adjustCapacity to True if this adjustment is desired
+  adjustCapacity=T
+  if(adjustCapacity) {
+    networkRestructured[[2]] <- networkRestructured[[2]] %>% 
+        mutate(capacity = ifelse(length<100 , capacity*2, capacity))
+  }
   
+  # Adding elevation to nodes and gradient to links
+  # Change  ElevationMultiplier based on your DEM's multiplier
+  # If your DEM is actual elevation, set the parameter to 1
   if(addElevation){ 
+    ElevationMultiplier=10
     networkRestructured[[1]] <- addElevation2Nodes(networkRestructured[[1]], 
                                                    'data/DEMx10EPSG28355.tif',
-                                                   multiplier=10)
+                                                   ElevationMultiplier)
     networkRestructured[[2]] <- addElevation2Links(networkRestructured)
   }
-  # # in case we don't have an id column.
-  # if(!"id"%in%colnames(networkRestructured[[2]])) {
-  #   networkRestructured[[2]] <- networkRestructured[[2]] %>%
-  #     mutate(id=paste0("link_",row_number())) %>%
-  #     relocate(id)
-  # }
-  
+
+  # Adding PT pseudo-network based on GTFS
+  # Adjust your analysis start date, end data and gtfs feed name below
   if(addGtfs) {
-    # read in the study region boundary
-    greaterMelbourne <- st_read("data/studyRegion.sqlite",quiet=T) %>%
-      st_buffer(10000) %>%
-      st_snap_to_grid(1)
-    system.time(networkRestructured[[2]] <- addGtfsLinks(outputLocation="./gtfs/",
-                                                         nodes=networkRestructured[[1]], 
-                                                         links=networkRestructured[[2]],
-                                                         studyRegion=greaterMelbourne)) 
+    # Adjust these parameters based on your GTFS file
+    gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip"
+    analysis_start = as.Date("2019-10-11","%Y-%m-%d")
+    analysis_end = as.Date("2019-10-17","%Y-%m-%d")
+    outputLocation="./gtfs/"
+    
+    if(file.exists("data/studyRegion.sqlite")){
+      # read in the study region boundary 
+      echo("Using Study Region file for GTFS processing")
+      studyRegion <- st_read("data/studyRegion.sqlite",quiet=T) %>%
+        st_buffer(10000) %>%
+        st_snap_to_grid(1)
+    }else{
+      echo("Using Study Region file was not found, skipping")
+      studyRegion = NA
+    }
+    system.time(
+      networkRestructured[[2]] <- addGtfsLinks(outputLocation=outputLocation,
+                                               nodes=networkRestructured[[1]], 
+                                               links=networkRestructured[[2]],
+                                               gtfs_feed=gtfs_feed,
+                                               analysis_star= analysis_start,
+                                               analysis_end=analysis_end,
+                                               studyRegion=studyRegion)) 
   }
   
   networkFinal <- networkRestructured
   
   # writing outputs ---------------------------------------------------------
-  message("========================================================")
-  message("|               **Launching Output Writing**           |")
-  message("--------------------------------------------------------")
+  echo("========================================================")
+  echo("|               **Launching Output Writing**           |")
+  echo("--------------------------------------------------------")
   
   if(writeSqlite) system.time(exportSQlite(networkFinal, outputFileName = "MATSimMelbNetwork"))
   if(writeShp) system.time(exportShp(networkFinal, outputFileName = "MATSimMelbNetwork"))

@@ -1,4 +1,4 @@
-addElevation2Nodes <- function(nodes, rasterFile, multiplier=10){
+addElevation2Nodes <- function(nodes, rasterFile, multiplier=1){
   elevation <- raster(rasterFile) 
   nodes$z <- round(raster::extract(elevation ,as(nodes, "Spatial"),method='bilinear'))/multiplier
   return(nodes)
