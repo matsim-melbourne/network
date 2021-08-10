@@ -20,6 +20,7 @@ combineRedundantEdges <- function(nodes_current,edges_current){
       inner_join(edges_shortest_geom, by="current_group") %>%
       group_by(current_group) %>% 
       summarise(uid=min(uid,na.rm=T),length=min(length,na.rm=T),
+                osm_id=paste(as.character(osm_id), collapse = "_"),
                 from_id=min(from_id,na.rm=T),to_id=max(to_id,na.rm=T),
                 freespeed_max=max(freespeed,na.rm = T),
                 freespeed=weighted.mean(freespeed,w=(permlanes*laneCapacity),na.rm=T),
@@ -92,7 +93,8 @@ combineRedundantEdges <- function(nodes_current,edges_current){
     edges_current %>% 
       st_drop_geometry() %>%
       filter(is_oneway==0) %>%
-      dplyr::select(uid,length,from_id,to_id,freespeed,permlanes,laneCapacity,
+      mutate(osm_id=as.character(osm_id)) %>% 
+      dplyr::select(uid,length,osm_id,from_id,to_id,freespeed,permlanes,laneCapacity,
                     is_oneway,cycleway,highway_order,is_cycle,is_walk,is_car)
   )
   

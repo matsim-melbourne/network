@@ -130,7 +130,8 @@ simplifyLines <- function(nodes,edges){
     # left_join(cluster_edges, by="cluster_id") %>%
     distinct() %>%
     group_by(cluster_id,from_id,to_id) %>%
-    summarise(freespeed=weighted.mean(freespeed,length,na.rm=T),
+    summarise(osm_id=paste(as.character(osm_id),collapse = "_"),
+              freespeed=weighted.mean(freespeed,length,na.rm=T),
               permlanes=round(weighted.mean(permlanes,length,na.rm=T)),
               laneCapacity=round(weighted.mean(laneCapacity,length,na.rm=T)),
               length=sum(length,na.rm=T),
@@ -177,7 +178,8 @@ simplifyLines <- function(nodes,edges){
     # left_join(cluster_edges, by="cluster_id") %>%
     distinct() %>%
     group_by(cluster_id,from_id,to_id) %>%
-    summarise(freespeed=weighted.mean(freespeed,length,na.rm=T),
+    summarise(osm_id=paste(as.character(osm_id),collapse = "_"),
+              freespeed=weighted.mean(freespeed,length,na.rm=T),
               permlanes=round(weighted.mean(permlanes,length,na.rm=T)),
               laneCapacity=round(weighted.mean(laneCapacity,length,na.rm=T)),
               length=sum(length,na.rm=T),
