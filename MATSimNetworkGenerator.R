@@ -92,10 +92,15 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   # There are some roads in OSM that are not correctly attributed
   # Use the function below to manually add their attributes based osm id
   osmAttributesCorrected <- osmMetaCorrection(osmAttributes)
-  # correct osm network
-  edgesOsmCorrected <- osmNetworkCorrection(networkInput)
+  
+  edgesOsm <- networkInput[[2]]
+  # Some network link corrections (+/-) specifically for Greater Melbourne OSM
+  # Change to TRUE if running on Greater Melbourne OSM, Otherwise, keep FALSE
+  # Also you can use the same function to correct networks for your region if needed 
+  correctNetwork <- F
+  if(correctNetwork) edgesOsm <- osmNetworkCorrection(networkInput)
 
-  edgesAttributed <- edgesOsmCorrected %>%
+  edgesAttributed <- edgesOsm %>%
     inner_join(osmAttributesCorrected, by="osm_id") %>%
     # dplyr::select(-osm_id,highway,highway_order)
     dplyr::select(-highway,highway_order)
