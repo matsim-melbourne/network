@@ -16,8 +16,8 @@ osmMetaCorrection <- function(osmAttributes){
   setFourLane <- c(10592122)
   
   # OSM ids that modes must be removed from them
-  removeCar <- c(35600976,35600978)
-  removeBike <- c()
+  removeCar <- c(35600976,35600978, 58199845)
+  removeBike <- c(58199845)
   removeWalk <- c()
   addCar <- c()
   addBike <- c()
@@ -41,3 +41,35 @@ osmMetaCorrection <- function(osmAttributes){
   return(osmAttributesCorrected)
 }
   
+
+osmNetworkCorrection <- function(networkInput){
+  nodes <- networkInput[[1]] 
+  edges <- networkInput[[2]] 
+  
+  nodesCoordinated <- nodes %>% 
+    st_drop_geometry() %>% 
+    cbind(st_coordinates(nodes)) %>% 
+    dplyr::select(id,X,Y)
+  
+  # Add the osm_id, from and to ids for new links to be added
+  addLinks <- tibble(osm_id=8066126 , from_id=as.integer(151368), to_id=as.integer(140998))
+  
+  addLinksCoordinated <- addLinks %>% 
+    left_join(nodesCoordinated,by=c("from_id"="id")) %>%
+    rename(fromX=X,fromY=Y) %>%
+    left_join(nodesCoordinated,by=c("to_id"="id")) %>%
+    rename(toX=X,toY=Y) %>%
+    mutate(geom=paste0("LINESTRING(",fromX," ",fromY,",",toX," ",toY,")")) %>%
+    st_as_sf(wkt = "geom", crs = 28355) %>% 
+    mutate(length=as.numeric(st_length(geom))) %>% 
+    dplyr::select(osm_id, length, from_id, to_id, geom)
+  
+  # add the osm IDs of the links to be removed here.
+  removeLinks <- c(252833218,252833216,252833215)
+  
+  edgesCorrected <- edges %>% 
+    rbind(addLinksCoordinated) %>% 
+    filter(!osm_id%in%removeLinks)
+  
+  return(edgesCorrected)
+}

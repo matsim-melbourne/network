@@ -92,10 +92,13 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   # There are some roads in OSM that are not correctly attributed
   # Use the function below to manually add their attributes based osm id
   osmAttributesCorrected <- osmMetaCorrection(osmAttributes)
-  
-  edgesAttributed <- networkInput[[2]] %>%
+  # correct osm network
+  edgesOsmCorrected <- osmNetworkCorrection(networkInput)
+
+  edgesAttributed <- edgesOsmCorrected %>%
     inner_join(osmAttributesCorrected, by="osm_id") %>%
-    dplyr::select(-osm_id,highway,highway_order)
+    # dplyr::select(-osm_id,highway,highway_order)
+    dplyr::select(-highway,highway_order)
   
   cat(paste0("edgesAttributed:\n"))
   str(edgesAttributed)
@@ -174,7 +177,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   
   # Doubling capacity for small road segments to avoid bottlenecks
   # Set adjustCapacity to True if this adjustment is desired
-  adjustCapacity=T
+  adjustCapacity=F
   if(adjustCapacity) {
     networkRestructured[[2]] <- networkRestructured[[2]] %>% 
         mutate(capacity = ifelse(length<100 , capacity*2, capacity))
