@@ -1,12 +1,42 @@
+#~highway          , ~highway_order
+# "motorway"       ,  1            
+# "motorway_link"  ,  8            
+# "trunk"          ,  2            
+# "trunk_link"     ,  9            
+# "primary"        ,  3            
+# "primary_link"   ,  10           
+# "secondary"      ,  4            
+# "secondary_link" ,  11           
+# "tertiary"       ,  5            
+# "tertiary_link"  ,  12           
+# "residential"    ,  6            
+# "road"           ,  7            
+# "unclassified"   ,  13           
+# "living_street"  ,  14           
+# "cycleway"       ,  15           
+# "track"          ,  16           
+# "service"        ,  17           
+# "pedestrian"     ,  18           
+# "footway"        ,  19           
+# "path"           ,  20           
+# "corridor"       ,  21           
+# "steps"          ,  22
 
-densifyNetwork <- function(networkList, minimum_length=400){
+densifyNetwork <- function(networkList, minimum_length=400, densifyBikeways=F){
   # networkList<-networkConnected;minimum_length = 400
   nodes_df <- networkList[[1]]
   links_df <- networkList[[2]] %>%
     mutate(tmp_id=row_number())
   
-  links_to_segmentize <- links_df %>%
-    filter(length>minimum_length & freespeed_max<17 & is_walk==1 & is_cycle==1 & is_car==1)
+  if (densifyBikeways) {
+    links_to_segmentize <- links_df %>%
+      filter(length>minimum_length & is_cycle==1)
+  }else{
+  # Densifying all except for "cycleway", "footway","motorway","motorway_link","path","pedestrian","pt","steps","track")
+    links_to_segmentize <- links_df %>%
+      filter(length>minimum_length & !highway_order%in%c(1,8,15,16,18,19,20,21,22))
+  }
+
   links_unsegmented <- links_df %>%
     filter(!tmp_id%in%links_to_segmentize$tmp_id)
   

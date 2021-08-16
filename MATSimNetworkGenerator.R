@@ -169,7 +169,10 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   
   # densify the network so that no residential streets are longer than 500m
   desnificationMaxLengh=500
-  networkDensified <- densifyNetwork(networkConnected,desnificationMaxLengh)
+  densifyBikeways=F
+  if (addElevation==T & densifyBikeways==F) message("Consider changing densifyBikeways to true when addElevation is true to ge a more accurate slope esimation for bikeways")
+  networkDensified <- densifyNetwork(networkConnected,desnificationMaxLengh,
+                                     densifyBikeways)
 
   # simplify geometry so all edges are straight lines
   system.time(networkDirect <-
