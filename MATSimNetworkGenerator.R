@@ -1,10 +1,10 @@
 makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F, 
                             addGtfs=F, writeXml=F, writeShp=F, writeSqlite=T,
                             networkSqlite="data/network.sqlite"){
-  
+
   # crop2TestArea=F; shortLinkLength=20; addElevation=F; addGtfs=T
   # writeXml=T; writeShp=F; writeSqlite=T; networkSqlite="data/network.sqlite"
-  
+  outputFileName="MATSimMelbNetwork"; demFile= 'data/DEMx10EPSG28355.tif'
 
   #libraries
   library(sf)
@@ -197,7 +197,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   if(addElevation){ 
     ElevationMultiplier=10
     networkRestructured[[1]] <- addElevation2Nodes(networkRestructured[[1]], 
-                                                   'data/DEMx10EPSG28355.tif',
+                                                  demFile,
                                                    ElevationMultiplier)
     networkRestructured[[2]] <- addElevation2Links(networkRestructured)
   }
@@ -209,7 +209,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
     gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip"
     analysis_start = as.Date("2019-10-11","%Y-%m-%d")
     analysis_end = as.Date("2019-10-17","%Y-%m-%d")
-    outputLocation="./gtfs/"
+    outputLocation=paste0("./generatedNetworks/gtfs_",outputFileName)
     
     if(file.exists("data/studyRegion.sqlite")){
       # read in the study region boundary 
@@ -238,8 +238,8 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   echo("|               **Launching Output Writing**           |")
   echo("--------------------------------------------------------")
   
-  if(writeSqlite) system.time(exportSQlite(networkFinal, outputFileName = "MATSimMelbNetwork"))
-  if(writeShp) system.time(exportShp(networkFinal, outputFileName = "MATSimMelbNetwork"))
-  if(writeXml) system.time(exportXML(networkFinal, outputFileName = "MATSimMelbNetwork")) 
+  if(writeSqlite) system.time(exportSQlite(networkFinal, outputFileName))
+  if(writeShp) system.time(exportShp(networkFinal, outputFileName))
+  if(writeXml) system.time(exportXML(networkFinal, outputFileName)) 
 }
 
