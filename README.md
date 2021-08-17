@@ -42,12 +42,12 @@ Make sure to have the `newtork.sqlite` and `melbourne.sqlite` files from the pre
 MATSim network generation code is written in R programming language and a working knowledge of R is expected.
 All required R packages must be installed before running the algorithm.
 `librarian` package in R automatically takes care of this for you when running the algorithm, however, you need internet connection in case you have a missing package.
-Before running the algorithm, adjust the parameters and input/output file names for your scenario in `MATSimNetworkGenerator.R`.
+Before running the algorithm, adjust the parameters and input/output file names for your scenario in `NetworkGenerator.R`.
 Adjustable parameters are listed under the Parameters sub-heading.
 
-To run the network generation algorithm from the terminal, you need to run the following script:
+To run the network generation algorithm from the terminal, you need to run something like below, specifying your desired output folder name as the argument for `makeNetwork()`:
 ```
-Rscript -e 'source("MATSimNetworkGenerator.R"); makeMatsimNetwork()'
+Rscript -e 'source("NetworkGenerator.R"); makeNetwork("example")'
 
 ```
 

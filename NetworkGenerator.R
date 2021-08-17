@@ -1,4 +1,4 @@
-makeMatsimNetwork<-function(){
+makeNetwork<-function(outputFileName="test"){
   
   # Parameters --------------------------------------------------------------
   
@@ -30,7 +30,9 @@ makeMatsimNetwork<-function(){
   
   # Outputs
   # outputFileName=format(Sys.time(),"%d%b%y_%H%M") # date_hour, eg. "17Aug21_1308"
-  outputFileName= "v1.1" 
+  if(exists("outputFileName")){
+    outputFileName=outputFileName
+  }else{outputFileName="test"}
   writeXml=T
   writeShp=F 
   writeSqlite=T
