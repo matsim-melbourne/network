@@ -63,7 +63,7 @@ processGtfs <- function(outputLocation="./test/",
   # analysis_start = as.Date("2019-10-11","%Y-%m-%d")
   # analysis_end = as.Date("2019-10-17","%Y-%m-%d")
   
-  dir.create(outputLocation, showWarnings = FALSE)
+  #dir.create(outputLocation, showWarnings = FALSE)
   
   gtfs <- read_gtfs(gtfs_feed)
   

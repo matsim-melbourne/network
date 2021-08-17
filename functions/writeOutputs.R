@@ -1,12 +1,12 @@
 
 # SQlite ------------------------------------------------------------------
-exportSQlite <- function(networkFinal, outputFileName){
+exportSQlite <- function(networkFinal, outputDir){
   
   cat('\n')
   echo(paste0('Writing the sqlite output: ', nrow(networkFinal[[2]]), 
               ' links and ', nrow(networkFinal[[1]]),' nodes\n'))
   
-  dir.create('./generatedNetworks/', showWarnings = FALSE)
+  # dir.create('./generatedNetworks/', showWarnings = FALSE)
   
   if(class(networkFinal[[1]])[1]!="sf"){
     networkFinal[[1]] <- networkFinal[[1]] %>% 
@@ -24,12 +24,10 @@ exportSQlite <- function(networkFinal, outputFileName){
   }
   
   # writing sqlite outputs
-  st_write(networkFinal[[2]], paste0('./generatedNetworks/', 
-                                     outputFileName,'.sqlite'), 
+  st_write(networkFinal[[2]], paste0(outputDir,'/network.sqlite'), 
            layer = 'links', driver = 'SQLite', layer_options = 'GEOMETRY=AS_XY',
            delete_layer = T)
-  st_write(networkFinal[[1]], paste0('./generatedNetworks/', 
-                                     outputFileName,'.sqlite'),
+  st_write(networkFinal[[1]], paste0(outputDir,'/network.sqlite'),
            layer = 'nodes', driver = 'SQLite', layer_options = 'GEOMETRY=AS_XY',
            delete_layer = T)
   
@@ -37,13 +35,11 @@ exportSQlite <- function(networkFinal, outputFileName){
 }
 
 # ShapeFile ---------------------------------------------------------------
-exportShp <- function(networkFinal, outputFileName){
+exportShp <- function(networkFinal, outputDir){
   
   cat('\n')
   echo(paste0('Writing the ShapeFile output: ', nrow(networkFinal[[2]]), 
               ' links and ', nrow(networkFinal[[1]]),' nodes\n'))
-  
-  dir.create('./generatedNetworks/', showWarnings = FALSE)
   
   if(class(networkFinal[[1]])!="sf"){
     networkFinal[[1]] <- networkFinal[[1]] %>% 
@@ -59,16 +55,13 @@ exportShp <- function(networkFinal, outputFileName){
       as.data.frame() %>%
       st_sf()
   }
-  
-  dir.create(paste0('./generatedNetworks/',outputFileName,"_shapefiles"),
-             showWarnings = FALSE)
+  shpDir <- paste0(outputDir,"/shapefiles")
+  dir.create(shpDir, showWarnings = FALSE)
   # writing ShapeFile outputs
-  st_write(networkFinal[[2]], paste0('./generatedNetworks/', 
-                                     outputFileName,'_shapefiles/links.shp'), 
+  st_write(networkFinal[[2]], paste0(shpDir,'/links.shp'), 
            driver = "ESRI Shapefile", layer_options = 'GEOMETRY=AS_XY', 
            delete_layer = T)
-  st_write(networkFinal[[1]], paste0('./generatedNetworks/', 
-                                     outputFileName,'_shapefiles/nodes.shp'), 
+  st_write(networkFinal[[1]], paste0(shpDir,'/nodes.shp'), 
            driver = "ESRI Shapefile", layer_options = 'GEOMETRY=AS_XY', 
            delete_layer = T)
   
@@ -77,9 +70,8 @@ exportShp <- function(networkFinal, outputFileName){
 }
 
 # XML ---------------------------------------------------------------------
-exportXML <- function(networkFinal, outputFileName = "outputXML"){
+exportXML <- function(networkFinal, outputDir){
   # Functions ---------------------------------------------------------------
-  source('./functions/etc/logging.R')
   add3DNode <- function(x){
     this_node <- nodes[x,]
     str_node <- paste0("    <node id=\"",
@@ -148,8 +140,8 @@ exportXML <- function(networkFinal, outputFileName = "outputXML"){
   
   echo('Starting to write the XML\n')
   # Set the output file
-  dir.create('./generatedNetworks/', showWarnings = FALSE)
-  xml_file <- paste0('./generatedNetworks/',outputFileName,'.xml')
+  # dir.create('./generatedNetworks/', showWarnings = FALSE)
+  xml_file <- paste0(outputDir,'/network.xml')
   
   # Adding the prefix
   open(file(xml_file), "wt")

@@ -40,33 +40,15 @@ cd data && ./prepare.sh -melb -net
 Make sure to have the `newtork.sqlite` and `melbourne.sqlite` files from the previous step, in the data folder before starting this step.
 
 MATSim network generation code is written in R programming language and a working knowledge of R is expected.
-All required R packages must be installed before running the algorithm. `packrat` will take of that for you and you just need to run the following in R to install the packages:
-```
-install.packages("packrat")
-packrat::restore()
-```
-Ensure that your setup is working by running:
-```
-testthat::test_dir("tests/testthat")
-```
-If all tests pass, you are all set to run the main algorithm.
+All required R packages must be installed before running the algorithm.
+`librarian` package in R automatically takes care of this for you when running the algorithm, however, you need internet connection in case you have a missing package.
+Before running the algorithm, adjust the parameters and input/output file names for your scenario in `MATSimNetworkGenerator.R`.
+Adjustable parameters are listed under the Parameters sub-heading.
 
-MATSim network generation algorithm is a designed to be configurable depending on what features are desired. To tell the alogrithm what features needs to be included, you need to run `makeNetwork.sh` **with its predefined flags**:
-
-| Argument | Description                                                                       |
-|----------|-----------------------------------------------------------------------------------|
-| -t       | Cropping to a small test area (Boundary can be adjusted by editing the code)      |
-| -s       | simplifying the network, minimum link length=20m                                  |
-| -z       | Adding elevation (requires the elevation data)                                    |
-| -pt      | Adding pt from GTFS (requires the GTFS data)                                      |
-| -xml     | Writing the output network in MATSim readable XML format                          |
-| -shp     | Writing the output network in ESRI Shapefile format                               |
-| -sqlite  | Writing the output network in SQLite format                                       |
-
-**Note** Make sure to **at least specify one output format** for the `makeNetwork.sh`. For example, the minimum command for creating a MATSim readable output would be:
-
+To run the network generation algorithm from the terminal, you need to run the following script:
 ```
-./makeNetwork.sh -xml
+Rscript -e 'source("MATSimNetworkGenerator.R"); makeMatsimNetwork()'
+
 ```
 
 ## Troubleshooting

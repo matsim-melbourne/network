@@ -1,76 +1,86 @@
-makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F, 
-                            addGtfs=F, writeXml=F, writeShp=F, writeSqlite=T,
-                            networkSqlite="data/network.sqlite"){
-
-  # crop2TestArea=F; shortLinkLength=20; addElevation=F; addGtfs=T
-  # writeXml=T; writeShp=F; writeSqlite=T; networkSqlite="data/network.sqlite"
-  outputFileName="MATSimMelbNetwork"; demFile= 'data/DEMx10EPSG28355.tif'
-
-  #libraries
-  library(sf)
-  library(lwgeom)
-  library(dplyr)
-  library(data.table)
-  library(stringr)
-  library(igraph)
-  library(raster)
-  library(rgdal)
-  library(purrr)
-  # These are needed if addGtfs=T
-  if(addGtfs){
-    library(tidytransit)
-    library(hablar)
-    library(lwgeom)
-    library(hms)
-  }
+makeMatsimNetwork<-function(){
   
-  #functions
-  source('./functions/etc/logging.R')
-  source('./functions/crop2TestArea.R')
-  source('./functions/cleanNetwork.R')
-  source('./functions/buildDefaultsDF.R')
-  source('./functions/processOsmTags.R')
-  source('./functions/largestConnectedComponent.R')
-  source('./functions/simplifyIntersections.R')
-  source('./functions/combineRedundantEdges.R')
-  source('./functions/combineUndirectedAndDirectedEdges.R')
-  source('./functions/simplifyLines.R')
-  source('./functions/removeDangles.R')
-  source('./functions/makeEdgesDirect.R')
-  source('./functions/restructureData.R')
-  source('./functions/addElevation.R')
-  source('./functions/gtfs2PtNetwork.R')
-  source('./functions/writeOutputs.R')
-  source('./functions/densifyNetwork.R')
-  source('./functions/osmMetaCorrection.R')
-    
-  echo("========================================================")
-  echo("                **Network Generation Setting**")
-  echo("--------------------------------------------------------")
-  echo(paste0("- Cropping to a test area:                        ",crop2TestArea))
-  echo(paste0("- Shortest link length in network simplification: ", shortLinkLength))
-  echo(paste0("- Adding elevation:                               ", addElevation))
-  echo(paste0("- Adding PT from GTFS:                            ", addGtfs))
-  echo(paste0("- Writing outputs in SQLite format:               ", writeSqlite))
-  echo(paste0("- Writing outputs in ShapeFile format:            ", writeShp))
-  echo(paste0("- Writing outputs in MATSim XML format:           ", writeXml))
-  echo("========================================================")
+  # Parameters --------------------------------------------------------------
   
-  echo("========================================================")
-  echo("                **Launching Network Generation**")
-  echo("--------------------------------------------------------")
+  # Input OSM processed network file 
+  networkSqlite="data/network.sqlite"
+  
+  # Simplification
+  shortLinkLength=20
+  minDangleLinkLengh=500
+  crop2TestArea=F
+  
+  # Densification
+  desnificationMaxLengh=500
+  densifyBikeways=F
+  
+  # Corrections
+  adjustCapacity=F
+  
+  # Elevation
+  addElevation=F
+  demFile= 'data/DEMx10EPSG28355.tif'
+  ElevationMultiplier=10  # DEM's multiplier- set to 1 if DEM contains actual elevation
+  
+  # GTFS 
+  addGtfs=F
+  gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip" # link to the GTFS .zip file
+  analysis_start = as.Date("2019-10-11","%Y-%m-%d") # Transit Feed start date
+  analysis_end = as.Date("2019-10-17","%Y-%m-%d") # Transit Feed end date
+  
+  # Outputs
+  # outputFileName=format(Sys.time(),"%d%b%y_%H%M") # date_hour, eg. "17Aug21_1308"
+  outputFileName= "v1.1" 
+  writeXml=T
+  writeShp=F 
+  writeSqlite=T
+  
+  # Packages ----------------------------------------------------------------
+  
+  if (!"librarian" %in% rownames(installed.packages())) install.packages("librarian")
+  library("librarian")
+  librarian::shelf(sf,dplyr,fs,data.table,stringr,igraph,raster,rgdal,purrr,lwgeom)
+  if(addGtfs)  librarian::shelf(tidytransit, hablar, hms)
+  
+  # Building the output folder structure ------------------------------------
+  
+  outputDir <- paste0("output/",outputFileName)
+  if(dir.exists(outputDir)) dir_delete(outputDir)
+  dir_create(paste0('./',outputDir))
+  sink(paste0('./',outputDir,'/makeMatsimNetwork.log'), append=FALSE, split=TRUE)
+  if (addGtfs) dir_create(paste0(outputDir,"/gtfs"))
+  
+  #  Functions --------------------------------------------------------------
+  
+  dir_walk(path="./functions/",source, recurse=T, type = "file")
+  
+  # Network processing-------------------------------------------------------
+  echo("========================================================\n")
+  echo("                **Network Generation Setting**          \n")
+  echo("--------------------------------------------------------\n")
+  echo(paste0("- Cropping to a test area:                        ", crop2TestArea,"\n"))
+  echo(paste0("- Shortest link length in network simplification: ", shortLinkLength,"\n"))
+  echo(paste0("- Adding elevation:                               ", addElevation,"\n"))
+  echo(paste0("- Adding PT from GTFS:                            ", addGtfs,"\n"))
+  echo(paste0("- Writing outputs in SQLite format:               ", writeSqlite,"\n"))
+  echo(paste0("- Writing outputs in ShapeFile format:            ", writeShp,"\n"))
+  echo(paste0("- Writing outputs in MATSim XML format:           ", writeXml,"\n"))
+  echo("========================================================\n")
+  echo("========================================================\n")
+  echo("                **Launching Network Generation**        \n")
+  echo("--------------------------------------------------------\n")
   
   # Note: writing logical fields to sqlite is a bad idea, so switching to integers
-    networkInput <- list(st_read(networkSqlite,layer="nodes",quiet=T),
-                         st_read(networkSqlite,layer="edges",quiet=T))
-    
-    # We run into trouble if the geometry column is 'geom' instead of 'GEOMETRY'
-    if('GEOMETRY'%in%colnames(networkInput[[1]])) {
-      networkInput[[1]]<-networkInput[[1]]%>%rename(geom=GEOMETRY)
-    }
-    if('GEOMETRY'%in%colnames(networkInput[[2]])) {
-      networkInput[[2]]<-networkInput[[2]]%>%rename(geom=GEOMETRY)
-    }
+  networkInput <- list(st_read(networkSqlite,layer="nodes",quiet=T),
+                       st_read(networkSqlite,layer="edges",quiet=T))
+  
+  # We run into trouble if the geometry column is 'geom' instead of 'GEOMETRY'
+  if('GEOMETRY'%in%colnames(networkInput[[1]])) {
+    networkInput[[1]]<-networkInput[[1]]%>%rename(geom=GEOMETRY)
+  }
+  if('GEOMETRY'%in%colnames(networkInput[[2]])) {
+    networkInput[[2]]<-networkInput[[2]]%>%rename(geom=GEOMETRY)
+  }
   
   cat(paste0("Network input, nodes:\n"))
   str(networkInput[[1]])
@@ -99,7 +109,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   # Also you can use the same function to correct networks for your region if needed 
   correctNetwork <- F
   if(correctNetwork) edgesOsm <- osmNetworkCorrection(networkInput)
-
+  
   edgesAttributed <- edgesOsm %>%
     inner_join(osmAttributesCorrected, by="osm_id") %>%
     # dplyr::select(-osm_id,highway,highway_order)
@@ -131,20 +141,21 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   # * Non-car edges do NOT count towards the merged lane count (permlanes)
   system.time(edgesCombined <- combineRedundantEdges(intersectionsSimplified[[1]],
                                                      intersectionsSimplified[[2]]))
-
+  
   # Merge one-way and two-way edges going between the same two nodes. In these 
   # cases, the merged attributes will be two-way.
   # This guarantees that there will only be a single edge between any two nodes.
   system.time(combinedUndirectedAndDirected <- 
                 combineUndirectedAndDirectedEdges(edgesCombined[[1]],
                                                   edgesCombined[[2]]))
-
+  
   # If there is a chain of edges between intersections, merge them together
   system.time(edgesSimplified <- simplifyLines(combinedUndirectedAndDirected[[1]],
                                                combinedUndirectedAndDirected[[2]]))
   
   # Remove dangles
-  system.time(noDangles <- removeDangles(edgesSimplified[[1]],edgesSimplified[[2]],500))
+  system.time(noDangles <- removeDangles(edgesSimplified[[1]],edgesSimplified[[2]],
+                                         minDangleLinkLengh))
   
   # Do a second round of simplification.
   system.time(edgesCombined2 <- combineRedundantEdges(noDangles[[1]],
@@ -159,7 +170,7 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
                                                       edgesSimplified2[[2]]))
   
   networkMode <- addMode(edgesCombined3)
-
+  
   # ensure transport is a directed routeable graph for each mode (i.e., connected
   # subgraph). The first function ensures a connected directed subgraph and the
   # second function ensures a connected subgraph but doesn't consider directionality.
@@ -168,12 +179,11 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   networkConnected <- largestNetworkSubgraph(networkNonDisconnected,'walk')
   
   # densify the network so that no residential streets are longer than 500m
-  desnificationMaxLengh=500
-  densifyBikeways=F
+  
   if (addElevation==T & densifyBikeways==F) message("Consider changing densifyBikeways to true when addElevation is true to ge a more accurate slope esimation for bikeways")
   networkDensified <- densifyNetwork(networkConnected,desnificationMaxLengh,
                                      densifyBikeways)
-
+  
   # simplify geometry so all edges are straight lines
   system.time(networkDirect <-
                 makeEdgesDirect(networkDensified[[1]],
@@ -185,31 +195,24 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   
   # Doubling capacity for small road segments to avoid bottlenecks
   # Set adjustCapacity to True if this adjustment is desired
-  adjustCapacity=F
   if(adjustCapacity) {
     networkRestructured[[2]] <- networkRestructured[[2]] %>% 
-        mutate(capacity = ifelse(length<100 , capacity*2, capacity))
+      mutate(capacity = ifelse(length<100 , capacity*2, capacity))
   }
   
   # Adding elevation to nodes and gradient to links
-  # Change  ElevationMultiplier based on your DEM's multiplier
-  # If your DEM is actual elevation, set the parameter to 1
+  
   if(addElevation){ 
-    ElevationMultiplier=10
     networkRestructured[[1]] <- addElevation2Nodes(networkRestructured[[1]], 
-                                                  demFile,
+                                                   demFile,
                                                    ElevationMultiplier)
     networkRestructured[[2]] <- addElevation2Links(networkRestructured)
   }
-
+  
   # Adding PT pseudo-network based on GTFS
   # Adjust your analysis start date, end data and gtfs feed name below
   if(addGtfs) {
     # Adjust these parameters based on your GTFS file
-    gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip"
-    analysis_start = as.Date("2019-10-11","%Y-%m-%d")
-    analysis_end = as.Date("2019-10-17","%Y-%m-%d")
-    outputLocation=paste0("./generatedNetworks/gtfs_",outputFileName)
     
     if(file.exists("data/studyRegion.sqlite")){
       # read in the study region boundary 
@@ -233,13 +236,13 @@ makeMatsimNetwork<-function(crop2TestArea=F, shortLinkLength=20, addElevation=F,
   
   networkFinal <- networkRestructured
   
-  # writing outputs ---------------------------------------------------------
-  echo("========================================================")
-  echo("|               **Launching Output Writing**           |")
-  echo("--------------------------------------------------------")
+  # writing outputs
+  echo("========================================================\n")
+  echo("|               **Launching Output Writing**           |\n")
+  echo("--------------------------------------------------------\n")
   
-  if(writeSqlite) system.time(exportSQlite(networkFinal, outputFileName))
-  if(writeShp) system.time(exportShp(networkFinal, outputFileName))
-  if(writeXml) system.time(exportXML(networkFinal, outputFileName)) 
+  if(writeSqlite) system.time(exportSQlite(networkFinal, outputDir))
+  if(writeShp) system.time(exportShp(networkFinal, outputDir))
+  if(writeXml) system.time(exportXML(networkFinal, outputDir)) 
 }
 

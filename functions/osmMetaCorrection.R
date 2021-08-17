@@ -41,7 +41,6 @@ osmMetaCorrection <- function(osmAttributes){
   return(osmAttributesCorrected)
 }
   
-
 osmNetworkCorrection <- function(networkInput){
   nodes <- networkInput[[1]] 
   edges <- networkInput[[2]] 
