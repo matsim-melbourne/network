@@ -60,33 +60,10 @@ jobs:
         sudo chown -R $USER:$USER $GITHUB_WORKSPACE/network
         sudo chown -R $USER:$USER $R_LIBS_USER
 
-    - name: Cache R packages
-      uses: actions/cache@v2
-      id: cache-packrat
-      env:
-        cache-name: cache-packrat-lib
-      with:
-        path: |
-          ${{ github.workspace }}/network/packrat/lib
-          ${{ github.workspace }}/network/data
-        key: ${{ runner.os }}-build-${{ env.cache-name }}-1-${{ hashFiles('**/packrat.lock') }}-${{ hashFiles('**/prepare.sh') }}
-        restore-keys: |
-          ${{ runner.os }}-build-${{ env.cache-name }}-1-
-
     - name: Get network data
       if: steps.cache-packrat.outputs.cache-hit != 'true'
       working-directory: network/data
       run: git checkout prepare.sh && ./prepare.sh -test
-
-    - name: Install packrat and project dependencies
-      if: steps.cache-packrat.outputs.cache-hit != 'true'
-      working-directory: network
-      shell: Rscript {0}
-      run: |
-        version
-        install.packages('packrat')
-        library(packrat)
-        packrat::restore()
 
     - name: Test OSM processing for network generation
       working-directory: network
@@ -100,10 +77,6 @@ jobs:
       working-directory: network
       shell: Rscript {0}
       run: |
-        library(packrat)
-        packrat::restore()
         testthat::test_dir("tests/testthat", stop_on_failure = TRUE)
-        library(packrat)
-      #packrat::on()
-      #source("MATSimNetworkGenerator.R")
-      #makeMatsimNetwork(F,20,F,F,F,F,T)
+      #source("NetworkGenerator.R")
+      #makeNetwork("test)
