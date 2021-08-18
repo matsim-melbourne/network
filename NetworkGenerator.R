@@ -227,7 +227,7 @@ makeNetwork<-function(outputFileName="test"){
       studyRegion = NA
     }
     system.time(
-      networkRestructured[[2]] <- addGtfsLinks(outputLocation=outputLocation,
+      networkRestructured[[2]] <- addGtfsLinks(outputLocation=paste0(outputDir,"/gtfs/"),
                                                nodes=networkRestructured[[1]], 
                                                links=networkRestructured[[2]],
                                                gtfs_feed=gtfs_feed,
