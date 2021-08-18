@@ -1,4 +1,3 @@
-
 addGtfsLinks <- function(outputLocation="./test/",
                          nodes, 
                          links,
@@ -33,6 +32,8 @@ addGtfsLinks <- function(outputLocation="./test/",
   stopTimes <- readRDS(paste0(outputLocation,"stopTimes.rds"))
   trips <- readRDS(paste0(outputLocation,"trips.rds"))
   routes <- readRDS(paste0(outputLocation,"routes.rds"))
+  stopTable <- readRDS(paste0(outputLocation, "stopTable.rds"))
+  
   # We run into trouble if the geometry column is 'geom' instead of 'GEOMETRY'
   if('GEOMETRY'%in%colnames(stops)) {
     stops<-stops%>%rename(geom=GEOMETRY)
@@ -46,7 +47,8 @@ addGtfsLinks <- function(outputLocation="./test/",
     stops,
     stopTimes,
     trips,
-    routes
+    routes,
+    stopTable
   )
   return(edgesCombined)
 }
@@ -168,6 +170,18 @@ processGtfs <- function(outputLocation="./test/",
   validRoutesSnapped <- validRoutes %>%
     filter(route_id %in% validTripsSnapped$route_id)
   
+  # table of GTFS railway station stop IDs and node ids (for later matching to patronage data)
+  stopTable <- validStopsSnapped %>%
+    st_drop_geometry() %>%
+    dplyr::select(stop_id, id) %>%
+    rename(gtfs_stop_id = stop_id, node_id = id) %>% #<<<<added from here to filter to stations
+    left_join(., gtfs$stops, by = c("gtfs_stop_id" = "stop_id")) %>%
+    # filter to rows containing 'Railway Station' and not '/' (used for bus or tram stops at stations) 
+    filter(grepl("Railway Station", stop_name) & !grepl("/", stop_name)) %>%
+    # replace the pattern 'space + Railway + any number of other characters' with nothing
+    mutate(station_name = gsub(" Railway.*","", stop_name)) %>%
+    dplyr::select(station_name, gtfs_stop_id, node_id)
+  
   
   # replace stop_id with id (i.e., use the network node id instead of the stop
   # id provided by the GTFS feed)
@@ -175,8 +189,9 @@ processGtfs <- function(outputLocation="./test/",
     dplyr::select(-stop_id) %>%
     group_by(id,x,y) %>%
     slice_head() %>%
-    ungroup()
-
+    ungroup() %>%
+    rename(stop_id=id)
+  
   validStopTimesSnappedFinal <- validStopTimesSnapped %>%
     dplyr::select(-stop_id) %>%
     rename(stop_id=id)
@@ -186,6 +201,8 @@ processGtfs <- function(outputLocation="./test/",
   saveRDS(validStopTimesSnappedFinal, file=paste0(outputLocation,"stopTimes.rds"))
   saveRDS(validTripsSnapped, file=paste0(outputLocation,"trips.rds"))
   saveRDS(validRoutesSnapped, file=paste0(outputLocation,"routes.rds"))
+  saveRDS(stopTable, file=paste0(outputLocation, "stopTable.rds"))
+  
 }
 
 
@@ -194,7 +211,8 @@ exportGtfsSchedule <- function(links,
                                stops,
                                stopTimes,
                                trips,
-                               routes){
+                               routes,
+                               stopTable){
   
   
   vehicleTripMatching <- trips %>%
@@ -246,7 +264,7 @@ exportGtfsSchedule <- function(links,
     dplyr::select(trip_id,route_id_new,departure_id,departure_time=arrival_time) %>%
     arrange(route_id_new,departure_id) %>%
     as.data.frame()
-
+  
   ptNetwork_StopsAndEdges <- ptNetwork %>%
     dplyr::select(from_id,to_id,from_x,from_y,to_x,to_y) %>%
     distinct() %>%
@@ -264,8 +282,18 @@ exportGtfsSchedule <- function(links,
     inner_join(ptNetwork_StopsAndEdges%>%st_drop_geometry()%>%dplyr::select(from_id,to_id,stop_id,link_id),
                by=c("from_id","to_id")) %>%
     dplyr::select(route_id_new,arrivalOffset,departureOffset,stop_id,link_id)
-    
-
+  
+  # adding Stop numbers to railway station stop table
+  ptNetwork_StopsAndEdges_Rail <- ptNetwork_StopsAndEdges %>%
+    filter(from_id %in% stopTable$node_id & to_id %in% stopTable$node_id)
+  
+  stopTable <- stopTable %>%
+    left_join(., ptNetwork_StopsAndEdges_Rail, by = c("node_id" = "from_id")) %>%
+    dplyr::select(station_name, gtfs_stop_id, node_id, stop_id) 
+  
+  write.csv(stopTable, file=paste0(outputLocation, "stopTable.csv"))
+  
+  
   # making tables for XML
   
   # ./data/transitVehicles.xml: vehicle
@@ -369,7 +397,7 @@ exportGtfsSchedule <- function(links,
   
   echo("writing transitStops\n")
   for (i in 1:nrow(transitStops)) {
-  # for (i in 1:100) {
+    # for (i in 1:100) {
     str<-paste0(str,
                 "    <stopFacility id=\"",transitStops[i,]$stop_id,"\" isBlocking=\"false\" linkRefId=\"",
                 transitStops[i,]$linkRefId,"\" x=\"",transitStops[i,]$x,"\" y=\"",transitStops[i,]$y,"\"/>\n")
@@ -383,7 +411,7 @@ exportGtfsSchedule <- function(links,
   }
   cat(paste0("  </transitStops>\n"),file=outxml,append=TRUE)
   cat(paste0("  <transitLine id=\"Melbourne\">\n"),file=outxml,append=TRUE)
-
+  
   echo("writing vehicleTripMatching\n")
   str<-""
   writeInterval<-100
@@ -434,8 +462,8 @@ exportGtfsSchedule <- function(links,
       str<-paste0(str,"      <route>\n")
       for (j in 1:nrow(routeProfileCurrent)) {
         str<-paste0(str,"        <link refId=\"",
-                   routeProfileCurrent[j,]$linkRefId,
-                   "\"/>\n")
+                    routeProfileCurrent[j,]$linkRefId,
+                    "\"/>\n")
       }
       str<-paste0(str,"      </route>\n")
       
