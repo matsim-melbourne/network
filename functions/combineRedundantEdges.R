@@ -18,7 +18,7 @@ combineRedundantEdges <- function(nodes_current,edges_current){
     grouped_edges_merged <- grouped_edges %>% 
       dplyr::select(-uid,-length) %>%
       inner_join(edges_shortest_geom, by="current_group") %>%
-      group_by(current_group) %>%
+      group_by(current_group) %>% 
       summarise(uid=min(uid,na.rm=T),length=min(length,na.rm=T),
                 from_id=min(from_id,na.rm=T),to_id=max(to_id,na.rm=T),
                 freespeed_max=max(freespeed,na.rm = T),
@@ -28,6 +28,8 @@ combineRedundantEdges <- function(nodes_current,edges_current){
                 permlanes=sum(permlanes,na.rm=T),
                 is_oneway=max(is_oneway,na.rm=T),cycleway=max(cycleway,na.rm=T),
                 highway_order=min(highway_order,na.rm=T), # selecting the highest rank
+                # surface=surface[which.max(length[!is.na(surface)])], # Take the max length surface type
+                surface=surface[which.max(length)], # Take the max length surface type
                 is_cycle=max(is_cycle,na.rm=T),is_walk=max(is_walk,na.rm=T),
                 is_car=max(is_car,na.rm=T),group_count=max(group_count,na.rm=T),
                 laneCapacity_average=round(mean(laneCapacity,na.rm=T))) %>%

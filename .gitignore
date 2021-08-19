@@ -1,3 +1,7 @@
 packrat/lib*/
 generatedNetworks/
 packrat/src/
+*.sqlite
+*.osm
+*.osm.pbf
+.Rproj.user

@@ -8,14 +8,14 @@ exportSQlite <- function(networkFinal, outputFileName){
   
   dir.create('./generatedNetworks/', showWarnings = FALSE)
   
-  if(class(networkFinal[[1]])!="sf"){
+  if(class(networkFinal[[1]])[1]!="sf"){
     networkFinal[[1]] <- networkFinal[[1]] %>% 
       mutate(GEOMETRY=paste0("POINT(",x," ",y,")")) %>%
       st_as_sf(wkt = "GEOMETRY", crs = 28355) %>% 
       as.data.frame() %>%
       st_sf()
   }
-  if(class(networkFinal[[2]])!="sf"){
+  if(class(networkFinal[[2]])[1]!="sf"){
     networkFinal[[2]] <- networkFinal[[2]] %>% 
       mutate(GEOMETRY=paste0("LINESTRING(",fromX," ",fromY,",",toX," ",toY,")")) %>%
       st_as_sf(wkt = "GEOMETRY", crs = 28355) %>% 
@@ -122,6 +122,8 @@ exportXML <- function(networkFinal, outputFileName = "outputXML"){
                         this_link$type, "</attribute>\n",
                         "        <attribute name=\"cycleway\" class=\"java.lang.String\">", 
                         this_link$cycleway, "</attribute>\n",
+                        "        <attribute name=\"surface\" class=\"java.lang.String\">", 
+                        this_link$surface, "</attribute>\n",
                         "        <attribute name=\"bicycleInfrastructureSpeedFactor\" class=\"java.lang.String\">", 
                         this_link$bicycleInfrastructureSpeedFactor, "</attribute>\n",
                         "    </attributes>\n",
@@ -181,8 +183,8 @@ exportXML <- function(networkFinal, outputFileName = "outputXML"){
            fromY=toY) %>% 
     mutate(id=NA) %>%
     dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
-                  permlanes, capacity, is_oneway, cycleway, highway, is_cycle, 
-                  is_walk, is_car, modes, id)
+                  permlanes, capacity, is_oneway, cycleway, highway, surface, 
+                  is_cycle, is_walk, is_car, modes, id)
   
   links <- rbind(links, bi_links) 
   
@@ -192,6 +194,7 @@ exportXML <- function(networkFinal, outputFileName = "outputXML"){
   links <- links %>%
     mutate(id = ifelse(is.na(id),row_number(),id)) %>% 
     mutate(type = replace(highway, is.na(highway), "NotSpecified")) %>% 
+    mutate(surface = ifelse(is.na(surface),"asphalt",surface)) %>% 
     mutate(cycleway = replace(cycleway, is.na(cycleway),"No")) %>% 
     mutate(bicycleInfrastructureSpeedFactor = 1) 
   # Adding links

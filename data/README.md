@@ -1,6 +1,6 @@
 # Network generation data
 
-This directory contains inputs files required to generate a MATSim network for Melbourne. Depending on which step of the process you want to start and what functions are going to be used during network generation, here you need to have relevant inputs.
+This directory contains inputs files required to generate a MATSim network for Melbourne, which can be found [here](https://cloudstor.aarnet.edu.au/plus/s/ssLkX8Uez64rV3D). Alternatively, you can use the `./prepare.sh` command as described below to download the data you need.
 
 ## How to populate
 
