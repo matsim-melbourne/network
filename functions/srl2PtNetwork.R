@@ -165,12 +165,6 @@ processSrl <- function(outputLocation, stations, lines, validRoadNodes,
             service_type = as.factor(SERVICETYPE))
   
 
-  # remove stop times after midnight (because times > 24:00:00 are not valid)
-  # ---------------------------------------------------------------------------
-  srlStopTimes <- srlStopTimes %>%
-    filter(arrival_time <= 86400)  # 86400 is 24:00:00
-  
-  
   # arrange srlTrips
   # ---------------------------------------------------------------------------
   srlTrips <- srlTrips %>%
