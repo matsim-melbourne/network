@@ -58,7 +58,7 @@ addGtfsLinks <- function(outputLocation="./test/",
   SPEED <- 60  # km/h
   ROUTEIDs <- c("SRL1", "SRL2")  # identifiers for distinct service patterns (one in each direction)
   SERVICEID <- "SRL0"  # identifier for distinct set of dates when services operate
-  SERVICETYPE <- "train"  # alternatively, "SRL" to distinguish from other trains, but would require changes in export functions
+  SERVICETYPE <- "SRL"  # to distinguish from other trains, but note export function needs to convert to type '1' (alternatively - "train")
 
   ## alternative for HOURS and INTERVAL allowing different intervals in peak periods
   ## note must be one interval for each span of hours, so length of INTERVAL must be one less than length of HOURS
@@ -295,6 +295,9 @@ exportGtfsSchedule <- function(links,
            departureOffset=as.character(as_hms(departureOffset)),
            arrival_time=as.character(as_hms(arrival_time)),
            departure_time=as.character(as_hms(departure_time))) %>%
+    # join trips and routes, so that service_type (from routes) can be used in stop_id 
+    left_join(., trips, by = "trip_id") %>%
+    left_join(., routes, by = "route_id") %>%
     as.data.frame()
 
   arrivalTimes <- ptNetwork %>%
@@ -323,26 +326,26 @@ exportGtfsSchedule <- function(links,
     as.data.frame()
 
   ptNetwork_StopsAndEdges <- ptNetwork %>%
-    dplyr::select(from_id,to_id,from_x,from_y,to_x,to_y) %>%
+    dplyr::select(from_id,to_id,from_x,from_y,to_x,to_y, service_type) %>%
     distinct() %>%
     filter(!is.na(to_id)) %>%
     mutate(geom=paste0("LINESTRING(",from_x," ",from_y,",",to_x," ",to_y,")")) %>%
     st_as_sf(wkt = "geom", crs = 28355) %>%
-    mutate(stop_id=paste0("Stop ",formatC(row_number(),digits=0,width=5,flag="0",format="d"))) %>%
+    mutate(stop_id=paste0("Stop ", service_type, " ", formatC(row_number(),digits=0,width=5,flag="0",format="d"))) %>%
     mutate(link_id=paste0("pt_",formatC(row_number(),digits=0,width=5,flag="0",format="d")))
 
   ptNetworkRoutes <- ptNetwork %>%
     inner_join(ptNetworkDepartures%>%group_by(route_id_new)%>%
                  slice(which.min(departure_id))%>%dplyr::select(trip_id,route_id_new),
                by="trip_id") %>%
-    dplyr::select(route_id_new,from_id,to_id,arrivalOffset,departureOffset) %>%
-    inner_join(ptNetwork_StopsAndEdges%>%st_drop_geometry()%>%dplyr::select(from_id,to_id,stop_id,link_id),
-               by=c("from_id","to_id")) %>%
+    dplyr::select(route_id_new,from_id,to_id,arrivalOffset,departureOffset, service_type) %>%
+    inner_join(ptNetwork_StopsAndEdges%>%st_drop_geometry()%>%dplyr::select(from_id,to_id,stop_id,link_id,service_type),
+               by=c("from_id","to_id", "service_type")) %>%
     dplyr::select(route_id_new,arrivalOffset,departureOffset,stop_id,link_id)
 
   # adding Stop numbers to railway station stop table
   ptNetwork_StopsAndEdges_Rail <- ptNetwork_StopsAndEdges %>%
-    filter(from_id %in% stopTable$node_id & to_id %in% stopTable$node_id)
+    filter(service_type == "train")
 
   stopTable <- stopTable %>%
     left_join(., ptNetwork_StopsAndEdges_Rail, by = c("node_id" = "from_id")) %>%
@@ -386,6 +389,7 @@ exportGtfsSchedule <- function(links,
     group_by(service_type) %>%
     mutate(type=NA,
            type=ifelse(service_type=="train",1,type),
+           type=ifelse(service_type=="SRL",1, type),
            type=ifelse(service_type=="bus",2,type),
            type=ifelse(service_type=="tram",3,type)) %>%
     mutate(vehicleRefId=paste0(service_type,"_",formatC(row_number(),digits=0,width=5,flag="0",format="d"))) %>%

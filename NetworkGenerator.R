@@ -23,7 +23,7 @@ makeNetwork<-function(outputFileName="test"){
   ElevationMultiplier=10  # DEM's multiplier- set to 1 if DEM contains actual elevation
   
   # GTFS 
-  addGtfs=F
+  addGtfs=T
   gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip" # link to the GTFS .zip file
   analysis_start = as.Date("2019-10-11","%Y-%m-%d") # Transit Feed start date
   analysis_end = as.Date("2019-10-17","%Y-%m-%d") # Transit Feed end date
@@ -231,7 +231,7 @@ makeNetwork<-function(outputFileName="test"){
                                                nodes=networkRestructured[[1]], 
                                                links=networkRestructured[[2]],
                                                gtfs_feed=gtfs_feed,
-                                               analysis_star= analysis_start,
+                                               analysis_start= analysis_start,
                                                analysis_end=analysis_end,
                                                studyRegion=studyRegion)) 
   }
