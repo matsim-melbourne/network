@@ -231,7 +231,7 @@ makeNetwork<-function(outputFileName="test"){
                                                nodes=networkRestructured[[1]], 
                                                links=networkRestructured[[2]],
                                                gtfs_feed=gtfs_feed,
-                                               analysis_star= analysis_start,
+                                               analysis_start= analysis_start,
                                                analysis_end=analysis_end,
                                                studyRegion=studyRegion)) 
   }
