@@ -79,5 +79,19 @@ brew install gdal
 brew install udunits
 ```
 
+## SRL configuration
+### Requirements and parameters
+The `addGtfsLinks()` function in `gtfs2PtNetwork.R` includes the creation of an assumed timetable for the SRL, which forms part of the public transport timetable.
+
+The function requires requires the file `srl_stg1.sqlite`, in EPSG:28355 - GDA 94 / MGA zone 55, containing two layers:
+- stations (point), with a 'sequence' field listing order of stations along line from one end to other
+- lines (linestring), containing separate line features each joining two adjacent stations
+
+The parameters contained in the function (which are adjustable) provide for SRL services to run:
+- between 5am and 12 midnight
+- every 6 minutes from 7am to 9am and 4pm to 6pm, and every 10 minutes at other times.
+
+
+
 ## Publications
 - Jafari, A., Both, A., Singh, D., Gunn, L., & Giles-Corti, B. (2021). [Building the road network for city-scale active transport simulation models](https://arxiv.org/abs/2104.03063). *arXiv preprint arXiv:2104.03063.*

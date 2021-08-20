@@ -53,18 +53,19 @@ addGtfsLinks <- function(outputLocation="./test/",
   # validRoadNodes <- st_read("data/validRoadNodes.sqlite", layer="validroadnodes")
 
   # set parameters for timetable
-  HOURS <- c("05:00:00", "24:00:00")  # start and end of timetable period
-  INTERVAL <- 600  # 600 seconds, ie. 10 minutes  or, if using peak: c(600, 240, 600, 240, 600)
+  # HOURS <- c("05:00:00", "24:00:00")  # start and end of timetable period
+  # INTERVAL <- 600  # 600 seconds, ie. 10 minutes  
+  
+  ## alternative for HOURS and INTERVAL allowing different intervals in peak periods
+  ## note must be one interval for each span of hours, so length of INTERVAL must be one less than length of HOURS
+  HOURS <- c("05:00:00", "07:00:00", "09:00:00", "16:00:00", "18:00:00", "24:00:00")
+  INTERVAL <- c(600, 360, 600, 360, 600)  # 6 mins in peak periods; otherwise 10 mins
+
   SPEED <- 60  # km/h
   ROUTEIDs <- c("SRL1", "SRL2")  # identifiers for distinct service patterns (one in each direction)
   SERVICEID <- "SRL0"  # identifier for distinct set of dates when services operate
   SERVICETYPE <- "SRL"  # to distinguish from other trains, but note export function needs to convert to type '1' (alternatively - "train")
-
-  ## alternative for HOURS and INTERVAL allowing different intervals in peak periods
-  ## note must be one interval for each span of hours, so length of INTERVAL must be one less than length of HOURS
-  # HOURS <- c("05:00:00", "07:00:00", "09:00:00", "16:00:00", "18:00:00", "24:00:00")
-  # INTERVAL <- c(600, 240, 600, 240, 600)  # 4 mins in peak periods; otherwise 10 mins
-
+  
   processSrl(
     outputLocation = outputLocation,
     stations = stations,
