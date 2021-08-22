@@ -1,29 +1,39 @@
 makeNetwork<-function(outputFileName="test"){
-  
+  # outputFileName="network"
   # Parameters --------------------------------------------------------------
   
-  # Input OSM processed network file 
+  # INPUT NETWORK 
+  # Output of the processOSM.sh 
   networkSqlite="data/network.sqlite"
   
-  # Simplification
+  # SIMPLIFICATION
   shortLinkLength=20
   minDangleLinkLengh=500
   crop2TestArea=F
   
-  # Densification
+  # DENSIFICATION
   desnificationMaxLengh=500
   densifyBikeways=F
   
-  # Corrections
+  # CORRECTION
+  # To add/remove specified links - see osmCorrection.R
+  # Change to TRUE if running on Greater Melbourne OSM, Otherwise, keep FALSE
+  # Also you can use the same function to correct networks for your region if needed 
+  correctNetwork=T 
+  # A flag for whether to multiply capacity of links shorter than 100m by 2 or not
+  # In some cases such as when building network for simulation of small samples (e.g. <1%) it might be desired
   adjustCapacity=F
   
-  # Elevation
-  addElevation=F
+  # ELEVATION
+  # A flag for whether to add elevation or not
+  addElevation=F 
+  # Digital elevation model file - make sure it is in the same coordinate system as your network
   demFile= 'data/DEMx10EPSG28355.tif'
-  ElevationMultiplier=10  # DEM's multiplier- set to 1 if DEM contains actual elevation
+  # DEM's multiplier- set to 1 if DEM contains actual elevation
+  ElevationMultiplier=10
   
   # GTFS 
-  addGtfs=F
+  addGtfs=T
   gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip" # link to the GTFS .zip file
   analysis_start = as.Date("2019-10-11","%Y-%m-%d") # Transit Feed start date
   analysis_end = as.Date("2019-10-17","%Y-%m-%d") # Transit Feed end date
@@ -68,7 +78,6 @@ makeNetwork<-function(outputFileName="test"){
   echo(paste0("- Writing outputs in ShapeFile format:            ", writeShp,"\n"))
   echo(paste0("- Writing outputs in MATSim XML format:           ", writeXml,"\n"))
   echo("========================================================\n")
-  echo("========================================================\n")
   echo("                **Launching Network Generation**        \n")
   echo("--------------------------------------------------------\n")
   
@@ -104,12 +113,8 @@ makeNetwork<-function(outputFileName="test"){
   # There are some roads in OSM that are not correctly attributed
   # Use the function below to manually add their attributes based osm id
   osmAttributesCorrected <- osmMetaCorrection(osmAttributes)
-  
   edgesOsm <- networkInput[[2]]
   # Some network link corrections (+/-) specifically for Greater Melbourne OSM
-  # Change to TRUE if running on Greater Melbourne OSM, Otherwise, keep FALSE
-  # Also you can use the same function to correct networks for your region if needed 
-  correctNetwork <- F
   if(correctNetwork) edgesOsm <- osmNetworkCorrection(networkInput)
   
   edgesAttributed <- edgesOsm %>%
