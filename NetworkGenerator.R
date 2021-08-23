@@ -16,7 +16,7 @@ makeNetwork<-function(outputFileName="test"){
   # SIMPLIFICATION
   shortLinkLength=20
   minDangleLinkLengh=500
-  crop2tArea=F
+  crop2Area=F
   # If crop2TestArea=T, find your area from https://github.com/JamesChevalier/cities/tree/master/australia/victoria and set the following to its poly name
   cropAreaPoly="city-of-melbourne_victoria"
   
@@ -28,7 +28,7 @@ makeNetwork<-function(outputFileName="test"){
   # To add/remove specified links - see osmCorrection.R
   # Change to TRUE if running on Greater Melbourne OSM, Otherwise, keep FALSE
   # Also you can use the same function to correct networks for your region if needed 
-  correctNetwork=T 
+  correctNetwork=F 
   # A flag for whether to multiply capacity of links shorter than 100m by 2 or not
   # In some cases such as when building network for simulation of small samples (e.g. <1%) it might be desired
   adjustCapacity=F
@@ -42,7 +42,7 @@ makeNetwork<-function(outputFileName="test"){
   ElevationMultiplier=10
   
   # GTFS 
-  addGtfs=T
+  addGtfs=F
   gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip" # link to the GTFS .zip file
   analysis_start = as.Date("2019-10-11","%Y-%m-%d") # Transit Feed start date
   analysis_end = as.Date("2019-10-17","%Y-%m-%d") # Transit Feed end date
@@ -80,7 +80,7 @@ makeNetwork<-function(outputFileName="test"){
   echo("                **Network Generation Setting**          \n")
   echo("--------------------------------------------------------\n")
   echo(paste0("- Starting from OSM extract:                      ", processOsm,"\n"))
-  echo(paste0("- Cropping to a test area:                        ", crop2TestArea,"\n"))
+  echo(paste0("- Cropping to a test area:                        ", crop2Area,"\n"))
   echo(paste0("- Shortest link length in network simplification: ", shortLinkLength,"\n"))
   echo(paste0("- Adding elevation:                               ", addElevation,"\n"))
   echo(paste0("- Adding PT from GTFS:                            ", addGtfs,"\n"))
@@ -127,11 +127,13 @@ makeNetwork<-function(outputFileName="test"){
   if(crop2Area)system.time(networkInput <- crop2Poly(networkInput,
                                                      cropAreaPoly,
                                                      outputCrs))
-  
+  echo("processing OSM meta data\n")
   osm_metadata <- st_read(networkSqlite,layer="osm_metadata",quiet=T) %>%
     filter(osm_id%in%networkInput[[2]]$osm_id)
+  echo("Building default OSM attribute tables\n")
   defaults_df <- buildDefaultsDF()
   highway_lookup <- defaults_df %>% dplyr::select(highway, highway_order)
+  echo("Processing OSM tags and joining with defaults\n")
   system.time( osmAttributes <- processOsmTags(osm_metadata,defaults_df))
   
   # There are some roads in OSM that are not correctly attributed
