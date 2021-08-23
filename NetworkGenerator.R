@@ -3,13 +3,22 @@ makeNetwork<-function(outputFileName="test"){
   # Parameters --------------------------------------------------------------
   
   # INPUT NETWORK 
-  # Output of the processOSM.sh 
+  # Set this to your desired cooridinate system for the network
+  outputCrs=28355
+  # A flag for whether process raw osm extract or not
+  processOsm=F
+  # If processOsm=T, Set this to your osm extract file name, e.g., melbourne.osm
+  # Note that osm.pbf format is not yet supported
+  osmExtract='./data/melbourne.osm'
+  # If procesOsm=F, set the following to the network sqlite file
   networkSqlite="data/network.sqlite"
   
   # SIMPLIFICATION
   shortLinkLength=20
   minDangleLinkLengh=500
-  crop2TestArea=F
+  crop2tArea=F
+  # If crop2TestArea=T, find your area from https://github.com/JamesChevalier/cities/tree/master/australia/victoria and set the following to its poly name
+  cropAreaPoly="city-of-melbourne_victoria"
   
   # DENSIFICATION
   desnificationMaxLengh=500
@@ -70,6 +79,7 @@ makeNetwork<-function(outputFileName="test"){
   echo("========================================================\n")
   echo("                **Network Generation Setting**          \n")
   echo("--------------------------------------------------------\n")
+  echo(paste0("- Starting from OSM extract:                      ", processOsm,"\n"))
   echo(paste0("- Cropping to a test area:                        ", crop2TestArea,"\n"))
   echo(paste0("- Shortest link length in network simplification: ", shortLinkLength,"\n"))
   echo(paste0("- Adding elevation:                               ", addElevation,"\n"))
@@ -80,6 +90,20 @@ makeNetwork<-function(outputFileName="test"){
   echo("========================================================\n")
   echo("                **Launching Network Generation**        \n")
   echo("--------------------------------------------------------\n")
+  
+  # Processing OSM
+  if(processOsm){
+    echo(paste0("Starting to process osm extract file, ", osmExtract,"\n"))
+    echo(paste0("This might take a while depending on your OSM extract size, ", osmExtract,"\n"))
+    echo(paste0("Output coordinate system: ", outputCrs, "\n"))
+    echo(paste0("Note that this step requires Postgres and GDAL/OGR to be installed, see readme for more info.\n"))
+    networkSqlite="./data/network.sqlite"
+    if(file_exists(osmExtract)){
+    system(paste("./processOSM.sh ", osmExtract, outputCrs, networkSqlite))
+    }else{
+      warning("OSM extract not found, skipping this step")
+    } 
+  }
   
   # Note: writing logical fields to sqlite is a bad idea, so switching to integers
   networkInput <- list(st_read(networkSqlite,layer="nodes",quiet=T),

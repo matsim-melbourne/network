@@ -1,8 +1,16 @@
 #!/bin/bash
 
+extract=$1
+crs=$2
+output=$3
+
+#extract='./data/melbourne_australia.osm'
+#crs=28355
+#output='./data/network3.sqlite'
+
 # change to the directory this script is located in
 cd "$(dirname "$0")"
-# extract the roads from the osm file, put in melbourne.sqlite
+# extract the roads from the osm file, put in temp.sqlite
 ogr2ogr -update -overwrite -nln roads -f "SQLite" -dsco SPATIALITE=YES \
   -dialect SQLite -sql \
   "SELECT CAST(osm_id AS DOUBLE PRECISION) AS osm_id, highway, other_tags, \
@@ -24,7 +32,7 @@ ogr2ogr -update -overwrite -nln roads -f "SQLite" -dsco SPATIALITE=YES \
         other_tags NOT LIKE '%abandoned%' AND \
         other_tags NOT LIKE '%parking%' AND \
         other_tags NOT LIKE '%\"access\"=>\"private\"%')) " \
-  ./data/melbourne.sqlite ./data/melbourne.osm
+  ./data/temp.sqlite $extract
 #      highway NOT LIKE '%service%' AND \
 # Removed since some service roads are used as footpaths (e.g., Royal Exhibition
 # building)
@@ -32,15 +40,15 @@ ogr2ogr -update -overwrite -nln roads -f "SQLite" -dsco SPATIALITE=YES \
 # bridleway can be used for walking and cycling (provided you give way to horses
 # they are more common in the UK.
 
-# extract the traffic signals, put in melbourne.sqlite
+# extract the traffic signals, put in temp.sqlite
 ogr2ogr -update -overwrite -nln roads_points -f "SQLite" -dsco SPATIALITE=YES \
   -dialect SQLite -sql \
   "SELECT CAST(osm_id AS DOUBLE PRECISION) AS osm_id, highway, other_tags, \
     GEOMETRY FROM points \
     WHERE highway LIKE '%traffic_signals%' " \
-  ./data/melbourne.sqlite ./data/melbourne.osm
+  ./data/temp.sqlite $extract
 
-# extract the train and tram lines and add to melbourne.sqlite
+# extract the train and tram lines and add to temp.sqlite
 # apparently there are miniature railways
 ogr2ogr -update -overwrite -nln pt -f "SQLite" -dialect SQLite -sql \
   "SELECT CAST(osm_id AS DOUBLE PRECISION) AS osm_id, highway, other_tags, \
@@ -55,7 +63,7 @@ ogr2ogr -update -overwrite -nln pt -f "SQLite" -dialect SQLite -sql \
       other_tags NOT LIKE '%preserved%' AND \
       other_tags NOT LIKE '%construction%' AND \
       other_tags NOT LIKE '%\"service\"=>\"yard\"%'" \
-  ./data/melbourne.sqlite ./data/melbourne.osm
+  ./data/temp.sqlite $extract
 
 # the postgres database name.
 DB_NAME="network_test"
@@ -69,16 +77,16 @@ psql -c 'create extension postgis' ${DB_NAME} postgres
 
 ogr2ogr -overwrite -lco GEOMETRY_NAME=geom -lco SCHEMA=public -f "PostgreSQL" \
   PG:"host=localhost port=5432 user=postgres dbname=${DB_NAME}" \
-  -a_srs "EPSG:4326" ./data/melbourne.sqlite roads
+  -a_srs "EPSG:4326" ./data/temp.sqlite roads
 ogr2ogr -overwrite -lco GEOMETRY_NAME=geom -lco SCHEMA=public -f "PostgreSQL" \
   PG:"host=localhost port=5432 user=postgres dbname=${DB_NAME}" \
-  -a_srs "EPSG:4326" ./data/melbourne.sqlite roads_points
+  -a_srs "EPSG:4326" ./data/temp.sqlite roads_points
   
 # run the sql statements
-psql -U postgres -d ${DB_NAME} -a -f melbNetwork.sql
+psql -U postgres -d ${DB_NAME} -a -f network.sql -v v1="$crs"
 
 # extract the nodes, edges, and osm metadata to the network file
-ogr2ogr -update -overwrite -f SQLite -dsco SPATIALITE=yes ./data/network.sqlite PG:"dbname=${DB_NAME} user=postgres" public.line_cut3 -nln edges
-ogr2ogr -update -overwrite -f SQLite -update ./data/network.sqlite PG:"dbname=${DB_NAME} user=postgres" public.nodes_attributed -nln nodes
-ogr2ogr -update -overwrite -f SQLite -update ./data/network.sqlite PG:"dbname=${DB_NAME} user=postgres" public.osm_metadata -nln osm_metadata
+ogr2ogr -update -overwrite -f SQLite -dsco SPATIALITE=yes $output PG:"dbname=${DB_NAME} user=postgres" public.line_cut3 -nln edges
+ogr2ogr -update -overwrite -f SQLite -update $output PG:"dbname=${DB_NAME} user=postgres" public.nodes_attributed -nln nodes
+ogr2ogr -update -overwrite -f SQLite -update $output PG:"dbname=${DB_NAME} user=postgres" public.osm_metadata -nln osm_metadata
 
