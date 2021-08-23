@@ -4,7 +4,8 @@ addGtfsLinks <- function(outputLocation="./test/",
                          gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip", 
                          analysis_start = as.Date("2019-10-11","%Y-%m-%d"), 
                          analysis_end = as.Date("2019-10-17","%Y-%m-%d"),
-                         studyRegion=NA){
+                         studyRegion=NA,
+                         outputCrs=28355){
   # outputLocation="./gtfs/"
   # nodes=networkRestructured[[1]]
   # links=networkRestructured[[2]]
@@ -21,7 +22,7 @@ addGtfsLinks <- function(outputLocation="./test/",
   # network nodes that can be reached via walking, cycling, and driving.  
   validRoadNodes <- nodes %>%
     filter(id %in% validRoadIds) %>%
-    st_set_crs(28355)
+    st_set_crs(outputCrs)
   
   # process the GTFS feed and export relevant tables into a folder
   processGtfs(outputLocation = outputLocation,
@@ -115,7 +116,7 @@ processGtfs <- function(outputLocation="./test/",
     filter(stop_id %in% validStopTimes$stop_id) %>%
     dplyr::select(stop_id,stop_lat,stop_lon) %>%
     st_as_sf(coords=c("stop_lon", "stop_lat"), crs=4326) %>%
-    st_transform(28355) %>%
+    st_transform(outputCrs) %>%
     st_snap_to_grid(1)
   
   # only want stops within the study region
@@ -273,7 +274,7 @@ exportGtfsSchedule <- function(links,
     distinct() %>%
     filter(!is.na(to_id)) %>% 
     mutate(geom=paste0("LINESTRING(",from_x," ",from_y,",",to_x," ",to_y,")")) %>%
-    st_as_sf(wkt = "geom", crs = 28355) %>%
+    st_as_sf(wkt = "geom", crs = outputCrs) %>%
     mutate(stop_id=paste0("Stop ", service_type, " ", formatC(row_number(),digits=0,width=5,flag="0",format="d"))) %>%
     mutate(link_id=paste0("pt_",formatC(row_number(),digits=0,width=5,flag="0",format="d")))
   

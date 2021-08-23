@@ -52,7 +52,7 @@ makeNetwork<-function(outputFileName="test"){
   if(exists("outputFileName")){
     outputFileName=outputFileName
   }else{outputFileName="test"}
-  writeXml=T
+  writeXml=F
   writeShp=F 
   writeSqlite=T
   
@@ -124,9 +124,9 @@ makeNetwork<-function(outputFileName="test"){
   str(networkInput[[2]])
   cat(paste0("\n"))
   
-  # select from https://github.com/JamesChevalier/cities/tree/master/australia/victoria
-  if(crop2TestArea)system.time(networkInput <- crop2Poly(networkInput,
-                                                         "city-of-melbourne_victoria"))
+  if(crop2Area)system.time(networkInput <- crop2Poly(networkInput,
+                                                     cropAreaPoly,
+                                                     outputCrs))
   
   osm_metadata <- st_read(networkSqlite,layer="osm_metadata",quiet=T) %>%
     filter(osm_id%in%networkInput[[2]]$osm_id)
@@ -210,7 +210,6 @@ makeNetwork<-function(outputFileName="test"){
   networkConnected <- largestNetworkSubgraph(networkNonDisconnected,'walk')
   
   # densify the network so that no residential streets are longer than 500m
-  
   if (addElevation==T & densifyBikeways==F) message("Consider changing densifyBikeways to true when addElevation is true to ge a more accurate slope esimation for bikeways")
   networkDensified <- densifyNetwork(networkConnected,desnificationMaxLengh,
                                      densifyBikeways)
@@ -232,7 +231,6 @@ makeNetwork<-function(outputFileName="test"){
   }
   
   # Adding elevation to nodes and gradient to links
-  
   if(addElevation){ 
     networkRestructured[[1]] <- addElevation2Nodes(networkRestructured[[1]], 
                                                    demFile,
@@ -244,7 +242,6 @@ makeNetwork<-function(outputFileName="test"){
   # Adjust your analysis start date, end data and gtfs feed name below
   if(addGtfs) {
     # Adjust these parameters based on your GTFS file
-    
     if(file.exists("data/studyRegion.sqlite")){
       # read in the study region boundary 
       echo("Using Study Region file for GTFS processing")
@@ -252,7 +249,7 @@ makeNetwork<-function(outputFileName="test"){
         st_buffer(10000) %>%
         st_snap_to_grid(1)
     }else{
-      echo("Using Study Region file was not found, skipping")
+      echo("Study Region file was not found, skipping")
       studyRegion = NA
     }
     system.time(
@@ -262,7 +259,8 @@ makeNetwork<-function(outputFileName="test"){
                                                gtfs_feed=gtfs_feed,
                                                analysis_start= analysis_start,
                                                analysis_end=analysis_end,
-                                               studyRegion=studyRegion)) 
+                                               studyRegion=studyRegion,
+                                               outputCrs=outputCrs)) 
   }
   
   networkFinal <- networkRestructured

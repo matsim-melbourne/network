@@ -1,6 +1,6 @@
-crop2Poly <- function(networkInput,selectPolygon){
+crop2Poly <- function(networkInput,selectPolygon,new_crs){
   # https://github.com/JamesChevalier/cities/tree/master/australia/victoria
-  focus_area_boundary <- getAreaBoundary(paste0("australia/victoria/",selectPolygon,".poly"), 28355)
+  focus_area_boundary <- getAreaBoundary(paste0("australia/victoria/",selectPolygon,".poly"), new_crs)
   networkInput[[1]] <- networkInput[[1]] %>%
     filter(lengths(st_intersects(., focus_area_boundary)) > 0)
   networkInput[[2]] <- networkInput[[2]] %>%
