@@ -67,7 +67,7 @@ jobs:
 
     - name: Test OSM processing for network generation
       working-directory: network
-      run: ./processOSM.sh
+      run: ./processOSM.sh ./data/melbourne.osm 28355 data/network.sqlite
       env:
         PGHOST: localhost
         PGPASSWORD: postgres
