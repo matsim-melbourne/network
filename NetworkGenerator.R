@@ -1,26 +1,45 @@
 makeNetwork<-function(outputFileName="test"){
-  
+  # outputFileName="network"
   # Parameters --------------------------------------------------------------
   
-  # Input OSM processed network file 
+  # INPUT NETWORK 
+  # Set this to your desired cooridinate system for the network
+  outputCrs=28355
+  # A flag for whether process raw osm extract or not
+  processOsm=F
+  # If processOsm=T, Set this to your osm extract file name, e.g., melbourne.osm
+  # Note that osm.pbf format is not yet supported
+  osmExtract='./data/melbourne.osm'
+  # If procesOsm=F, set the following to the network sqlite file
   networkSqlite="data/network.sqlite"
   
-  # Simplification
+  # SIMPLIFICATION
   shortLinkLength=20
   minDangleLinkLengh=500
-  crop2TestArea=F
+  crop2Area=F
+  # If crop2TestArea=T, find your area from https://github.com/JamesChevalier/cities/tree/master/australia/victoria and set the following to its poly name
+  cropAreaPoly="city-of-melbourne_victoria"
   
-  # Densification
+  # DENSIFICATION
   desnificationMaxLengh=500
   densifyBikeways=F
   
-  # Corrections
+  # CORRECTION
+  # To add/remove specified links - see osmCorrection.R
+  # Change to TRUE if running on Greater Melbourne OSM, Otherwise, keep FALSE
+  # Also you can use the same function to correct networks for your region if needed 
+  correctNetwork=F 
+  # A flag for whether to multiply capacity of links shorter than 100m by 2 or not
+  # In some cases such as when building network for simulation of small samples (e.g. <1%) it might be desired
   adjustCapacity=F
   
-  # Elevation
-  addElevation=F
+  # ELEVATION
+  # A flag for whether to add elevation or not
+  addElevation=F 
+  # Digital elevation model file - make sure it is in the same coordinate system as your network
   demFile= 'data/DEMx10EPSG28355.tif'
-  ElevationMultiplier=10  # DEM's multiplier- set to 1 if DEM contains actual elevation
+  # DEM's multiplier- set to 1 if DEM contains actual elevation
+  ElevationMultiplier=10
   
   # GTFS 
   addGtfs=T
@@ -33,7 +52,7 @@ makeNetwork<-function(outputFileName="test"){
   if(exists("outputFileName")){
     outputFileName=outputFileName
   }else{outputFileName="test"}
-  writeXml=T
+  writeXml=F
   writeShp=F 
   writeSqlite=T
   
@@ -60,7 +79,8 @@ makeNetwork<-function(outputFileName="test"){
   echo("========================================================\n")
   echo("                **Network Generation Setting**          \n")
   echo("--------------------------------------------------------\n")
-  echo(paste0("- Cropping to a test area:                        ", crop2TestArea,"\n"))
+  echo(paste0("- Starting from OSM extract:                      ", processOsm,"\n"))
+  echo(paste0("- Cropping to a test area:                        ", crop2Area,"\n"))
   echo(paste0("- Shortest link length in network simplification: ", shortLinkLength,"\n"))
   echo(paste0("- Adding elevation:                               ", addElevation,"\n"))
   echo(paste0("- Adding PT from GTFS:                            ", addGtfs,"\n"))
@@ -68,9 +88,22 @@ makeNetwork<-function(outputFileName="test"){
   echo(paste0("- Writing outputs in ShapeFile format:            ", writeShp,"\n"))
   echo(paste0("- Writing outputs in MATSim XML format:           ", writeXml,"\n"))
   echo("========================================================\n")
-  echo("========================================================\n")
   echo("                **Launching Network Generation**        \n")
   echo("--------------------------------------------------------\n")
+  
+  # Processing OSM
+  if(processOsm){
+    echo(paste0("Starting to process osm extract file, ", osmExtract,"\n"))
+    echo(paste0("This might take a while depending on your OSM extract size, ", osmExtract,"\n"))
+    echo(paste0("Output coordinate system: ", outputCrs, "\n"))
+    echo(paste0("Note that this step requires Postgres and GDAL/OGR to be installed, see readme for more info.\n"))
+    networkSqlite="./data/network.sqlite"
+    if(file_exists(osmExtract)){
+    system(paste("./processOSM.sh ", osmExtract, outputCrs, networkSqlite))
+    }else{
+      warning("OSM extract not found, skipping this step")
+    } 
+  }
   
   # Note: writing logical fields to sqlite is a bad idea, so switching to integers
   networkInput <- list(st_read(networkSqlite,layer="nodes",quiet=T),
@@ -91,25 +124,23 @@ makeNetwork<-function(outputFileName="test"){
   str(networkInput[[2]])
   cat(paste0("\n"))
   
-  # select from https://github.com/JamesChevalier/cities/tree/master/australia/victoria
-  if(crop2TestArea)system.time(networkInput <- crop2Poly(networkInput,
-                                                         "city-of-melbourne_victoria"))
-  
+  if(crop2Area)system.time(networkInput <- crop2Poly(networkInput,
+                                                     cropAreaPoly,
+                                                     outputCrs))
+  echo("processing OSM meta data\n")
   osm_metadata <- st_read(networkSqlite,layer="osm_metadata",quiet=T) %>%
     filter(osm_id%in%networkInput[[2]]$osm_id)
+  echo("Building default OSM attribute tables\n")
   defaults_df <- buildDefaultsDF()
   highway_lookup <- defaults_df %>% dplyr::select(highway, highway_order)
+  echo("Processing OSM tags and joining with defaults\n")
   system.time( osmAttributes <- processOsmTags(osm_metadata,defaults_df))
   
   # There are some roads in OSM that are not correctly attributed
   # Use the function below to manually add their attributes based osm id
   osmAttributesCorrected <- osmMetaCorrection(osmAttributes)
-  
   edgesOsm <- networkInput[[2]]
   # Some network link corrections (+/-) specifically for Greater Melbourne OSM
-  # Change to TRUE if running on Greater Melbourne OSM, Otherwise, keep FALSE
-  # Also you can use the same function to correct networks for your region if needed 
-  correctNetwork <- F
   if(correctNetwork) edgesOsm <- osmNetworkCorrection(networkInput)
   
   edgesAttributed <- edgesOsm %>%
@@ -181,7 +212,6 @@ makeNetwork<-function(outputFileName="test"){
   networkConnected <- largestNetworkSubgraph(networkNonDisconnected,'walk')
   
   # densify the network so that no residential streets are longer than 500m
-  
   if (addElevation==T & densifyBikeways==F) message("Consider changing densifyBikeways to true when addElevation is true to ge a more accurate slope esimation for bikeways")
   networkDensified <- densifyNetwork(networkConnected,desnificationMaxLengh,
                                      densifyBikeways)
@@ -203,7 +233,6 @@ makeNetwork<-function(outputFileName="test"){
   }
   
   # Adding elevation to nodes and gradient to links
-  
   if(addElevation){ 
     networkRestructured[[1]] <- addElevation2Nodes(networkRestructured[[1]], 
                                                    demFile,
@@ -215,7 +244,6 @@ makeNetwork<-function(outputFileName="test"){
   # Adjust your analysis start date, end data and gtfs feed name below
   if(addGtfs) {
     # Adjust these parameters based on your GTFS file
-    
     if(file.exists("data/studyRegion.sqlite")){
       # read in the study region boundary 
       echo("Using Study Region file for GTFS processing")
@@ -223,7 +251,7 @@ makeNetwork<-function(outputFileName="test"){
         st_buffer(10000) %>%
         st_snap_to_grid(1)
     }else{
-      echo("Using Study Region file was not found, skipping")
+      echo("Study Region file was not found, skipping")
       studyRegion = NA
     }
     system.time(
@@ -233,7 +261,8 @@ makeNetwork<-function(outputFileName="test"){
                                                gtfs_feed=gtfs_feed,
                                                analysis_start= analysis_start,
                                                analysis_end=analysis_end,
-                                               studyRegion=studyRegion)) 
+                                               studyRegion=studyRegion,
+                                               outputCrs=outputCrs)) 
   }
   
   networkFinal <- networkRestructured

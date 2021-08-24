@@ -3,11 +3,11 @@
 -- transforms the geometries to a projected (i.e, x,y) system and snaps to the
 -- nearest metre. Was using GDA2020 (7845), now using MGA Zone 55 (28355)
 ALTER TABLE roads
- ALTER COLUMN geom TYPE geometry(LineString,28355)
-  USING ST_SnapToGrid(ST_Transform(geom,28355),1);
+ ALTER COLUMN geom TYPE geometry(LineString,:v1)
+  USING ST_SnapToGrid(ST_Transform(geom,:v1),1);
 ALTER TABLE roads_points
- ALTER COLUMN geom TYPE geometry(Point,28355)
-  USING ST_SnapToGrid(ST_Transform(geom,28355),1);
+ ALTER COLUMN geom TYPE geometry(Point,:v1)
+  USING ST_SnapToGrid(ST_Transform(geom,:v1),1);
 CREATE INDEX roads_points_gix ON roads USING GIST (geom);
 
 -- determine if the road segment is a bridge or tunnel
