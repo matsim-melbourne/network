@@ -52,7 +52,7 @@ makeNetwork<-function(outputFileName="test"){
   if(exists("outputFileName")){
     outputFileName=outputFileName
   }else{outputFileName="test"}
-  writeXml=F
+  writeXml=T
   writeShp=F 
   writeSqlite=T
   
