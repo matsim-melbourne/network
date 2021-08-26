@@ -27,7 +27,8 @@ addGtfsLinks <- function(outputLocation="./test/",
   # process the GTFS feed and export relevant tables into a folder
   processGtfs(outputLocation = outputLocation,
               networkNodes = validRoadNodes,
-              studyRegion = studyRegion)
+              studyRegion = studyRegion,
+              outputCrs = outputCrs)
   # read the outputs
   stops <- st_read(paste0(outputLocation,"stops.sqlite"),quiet=T)
   stopTimes <- readRDS(paste0(outputLocation,"stopTimes.rds"))
@@ -49,7 +50,8 @@ addGtfsLinks <- function(outputLocation="./test/",
     stopTimes,
     trips,
     routes,
-    stopTable
+    stopTable,
+    outputCrs
   )
   return(edgesCombined)
 }
@@ -59,7 +61,8 @@ processGtfs <- function(outputLocation="./test/",
                         gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip", 
                         analysis_start = as.Date("2019-10-11","%Y-%m-%d"), 
                         analysis_end = as.Date("2019-10-17","%Y-%m-%d"),
-                        studyRegion=NA){
+                        studyRegion=NA,
+                        outputCrs){
   # outputLocation="./gtfs/"
   # networkNodes = validRoadNodes
   # gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip"
@@ -213,7 +216,8 @@ exportGtfsSchedule <- function(links,
                                stopTimes,
                                trips,
                                routes,
-                               stopTable){
+                               stopTable,
+                               outputCrs){
   
   
   vehicleTripMatching <- trips %>%
