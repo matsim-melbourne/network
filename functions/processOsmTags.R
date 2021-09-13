@@ -3,7 +3,7 @@
 #-----------------|--------------------|----------------|
 # cycleway        | bikepath           | 5              |
 # cycleway + walk | shared_path        | 4              | 
-# track           | seperated_lane     | 3              |
+# track           | separated_lane     | 3              |
 # lane            | simple_lane        | 2              |
 # shared_lane     | shared_street      | 1              |
 # -               | no lane/track/path | 0              |

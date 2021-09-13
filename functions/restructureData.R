@@ -44,7 +44,7 @@ restructureData <- function(networkList, highway_lookup,
   
   # Bike hierarchy:
   # bikepath           = 4
-  # seperated_lane     = 3
+  # separated_lane     = 3
   # lane               = 2
   # shared_lane        = 1
   # no_lane/no_cycling = 0
@@ -61,7 +61,7 @@ restructureData <- function(networkList, highway_lookup,
     # convert cycleway from numbers to text
     mutate(cycleway=ifelse(cycleway==5, "bikepath"      , cycleway)) %>%
     mutate(cycleway=ifelse(cycleway==4, "shared_path"   , cycleway)) %>%
-    mutate(cycleway=ifelse(cycleway==3, "seperated_lane", cycleway)) %>%
+    mutate(cycleway=ifelse(cycleway==3, "separated_lane", cycleway)) %>%
     mutate(cycleway=ifelse(cycleway==2, "simple_lane"   , cycleway)) %>%
     mutate(cycleway=ifelse(cycleway==1, "shared_street" , cycleway)) %>%
     mutate(cycleway=ifelse(cycleway==0, NA              , cycleway)) %>%
