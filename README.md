@@ -16,8 +16,12 @@ Network generation code is written primarily in R programming language, with som
 To get started, you must first prepare the required input files for generating the network.
 There are multiple entry points to the algorithm. If you want to start from raw OSM extract, download the extract for your region. Please note that it should be in .osm format, .osm.pbf is not yet supported. You can use [osmconvert](https://wiki.openstreetmap.org/wiki/Osmconvert) easily convert .osm.pbf to .osm.
 
-All required R packages must be installed before running the algorithm.
-`librarian` package in R automatically takes care of this for you when running the algorithm, however, you need internet connection in case you have a missing package.
+All required R packages must be installed before running the algorithm. `renv` will take of that for you and you just need to run the following in R to install the packages:
+```
+install.packages("renv")
+renv::restore()
+```
+
 Before running the algorithm, adjust the parameters and input/output file names for your scenario in `NetworkGenerator.R`.
 Adjustable parameters are listed under the Parameters sub-heading.
 

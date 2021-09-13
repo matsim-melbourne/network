@@ -12,69 +12,78 @@ makeNetwork<-function(outputFileName="test"){
   osmExtract='./data/melbourne.osm'
   # If procesOsm=F, set the following to the network sqlite file
   networkSqlite="data/network.sqlite"
-  
+
   # SIMPLIFICATION
   shortLinkLength=20
   minDangleLinkLengh=500
   crop2Area=F
   # If crop2TestArea=T, find your area from https://github.com/JamesChevalier/cities/tree/master/australia/victoria and set the following to its poly name
   cropAreaPoly="city-of-melbourne_victoria"
-  
+
   # DENSIFICATION
   desnificationMaxLengh=500
   densifyBikeways=F
-  
+
   # CORRECTION
   # To add/remove specified links - see osmCorrection.R
   # Change to TRUE if running on Greater Melbourne OSM, Otherwise, keep FALSE
-  # Also you can use the same function to correct networks for your region if needed 
-  correctNetwork=F 
+  # Also you can use the same function to correct networks for your region if needed
+  correctNetwork=F
   # A flag for whether to multiply capacity of links shorter than 100m by 2 or not
   # In some cases such as when building network for simulation of small samples (e.g. <1%) it might be desired
   adjustCapacity=F
-  
+
   # ELEVATION
   # A flag for whether to add elevation or not
-  addElevation=F 
+  addElevation=F
   # Digital elevation model file - make sure it is in the same coordinate system as your network
   demFile= 'data/DEMx10EPSG28355.tif'
   # DEM's multiplier- set to 1 if DEM contains actual elevation
   ElevationMultiplier=10
-  
-  # GTFS 
+
+  # GTFS
   addGtfs=F
   gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip" # link to the GTFS .zip file
   analysis_start = as.Date("2019-10-11","%Y-%m-%d") # Transit Feed start date
   analysis_end = as.Date("2019-10-17","%Y-%m-%d") # Transit Feed end date
-  
+
   # Outputs
   # outputFileName=format(Sys.time(),"%d%b%y_%H%M") # date_hour, eg. "17Aug21_1308"
   if(exists("outputFileName")){
     outputFileName=outputFileName
   }else{outputFileName="test"}
   writeXml=F
-  writeShp=F 
+  writeShp=F
   writeSqlite=T
-  
+
   # Packages ----------------------------------------------------------------
-  
-  if (!"librarian" %in% rownames(installed.packages())) install.packages("librarian")
-  library("librarian")
-  librarian::shelf(sf,dplyr,fs,data.table,stringr,igraph,raster,rgdal,purrr,lwgeom)
-  if(addGtfs)  librarian::shelf(tidytransit, hablar, hms)
-  
+
+ library(sf)
+ library(fs)
+ library(dplyr)
+ library(data.table)
+ library(stringr)
+ library(igraph)
+ library(raster)
+ library(rgdal)
+ library(purrr)
+ library(lwgeom)
+ library(tidytransit)
+ library(hablar)
+ library(hms)
+
   # Building the output folder structure ------------------------------------
-  
+
   outputDir <- paste0("output/",outputFileName)
   if(dir.exists(outputDir)) dir_delete(outputDir)
   dir_create(paste0('./',outputDir))
   sink(paste0('./',outputDir,'/makeMatsimNetwork.log'), append=FALSE, split=TRUE)
   if (addGtfs) dir_create(paste0(outputDir,"/gtfs"))
-  
+
   #  Functions --------------------------------------------------------------
-  
+
   dir_walk(path="./functions/",source, recurse=T, type = "file")
-  
+
   # Network processing-------------------------------------------------------
   echo("========================================================\n")
   echo("                **Network Generation Setting**          \n")
