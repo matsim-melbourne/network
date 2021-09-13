@@ -9,6 +9,10 @@ osmMetaCorrection <- function(osmAttributes){
   # Add to the list below to add separated bike lane
   setSepBikeLane <- c()
   
+  removeCycleway <- c(45020428, 45020444,  45020461, 45020467, 45020504, 45020505,  45020469,  45020487,  106603846,  106603850, #alma park 
+                      62353346,  62353439,  62353440,  62353441,
+                      18523511)
+  
   # These should be two lane
   setOneLane <- c()
   setTwoLane <- c()
@@ -17,7 +21,10 @@ osmMetaCorrection <- function(osmAttributes){
   
   # OSM ids that modes must be removed from them
   removeCar <- c(35600976,35600978, 58199845)
-  removeBike <- c(58199845)
+  removeBike <- c(58199845,
+                  45020428, 45020444,  45020461, 45020467, 45020504, 45020505,  45020469,  45020487,  106603846,  106603850, #alma park 
+                  62353346,  62353439,  62353440,  62353441,
+                  18523511) 
   removeWalk <- c()
   addCar <- c()
   addBike <- c()
@@ -25,12 +32,18 @@ osmMetaCorrection <- function(osmAttributes){
   
   # Add to the mutate/replace code below if there are other fields to correct
   osmAttributesCorrected <- osmAttributes %>% 
+    # modifying bicycle infrastructure
     mutate(cycleway  = ifelse(osm_id%in%setBikeLane   , 2 , cycleway)) %>% 
-    mutate(cycleway  = ifelse(osm_id%in%setSepBikeLane, 3 , cycleway)) %>% 
+    mutate(cycleway  = ifelse(osm_id%in%setSepBikeLane, 3 , cycleway)) %>%
+    mutate(cycleway  = ifelse(osm_id%in%removeCycleway, 0 , cycleway)) %>% 
+    mutate(highway = ifelse(osm_id%in%removeCycleway, "footway", highway)) %>%
+    mutate(highway_order = ifelse(osm_id%in%removeCycleway, 19, highway_order)) %>%
+    # modifying number of lanes
     mutate(permlanes = ifelse(osm_id%in%setOneLane    , 1 , permlanes)) %>%  
     mutate(permlanes = ifelse(osm_id%in%setTwoLane    , 2 , permlanes)) %>%  
     mutate(permlanes = ifelse(osm_id%in%setThreeLane  , 3 , permlanes)) %>%  
-    mutate(permlanes = ifelse(osm_id%in%setFourLane   , 4 , permlanes)) %>%  
+    mutate(permlanes = ifelse(osm_id%in%setFourLane   , 4 , permlanes)) %>%
+    # modifying permitted modes
     mutate(is_car    = ifelse(osm_id%in%removeCar     , 0 , is_car)) %>%  
     mutate(is_cycle  = ifelse(osm_id%in%removeBike    , 0 , is_cycle)) %>%  
     mutate(is_walk   = ifelse(osm_id%in%removeWalk    , 0 , is_walk)) %>%  
