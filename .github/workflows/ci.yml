@@ -77,6 +77,7 @@ jobs:
       run: |
         install.packages("renv")
         renv::restore()
+        install.packages("testthat")
         testthat::test_dir("tests/testthat", stop_on_failure = TRUE)
       #source("NetworkGenerator.R")
       #makeNetwork("test)
