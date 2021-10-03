@@ -45,15 +45,19 @@ processSrl <- function(outputLocation, stations, lines, validRoadNodes,
   departures <- c()
   
   for (i in 1:(length(HOURS)-1)) {
-    deptime <- as_hms(HOURS[i])
+    # first departure time, in seconds
+    deptime <- period_to_seconds(hms(HOURS[i]))
     departures <- append(departures, deptime)
-    while (deptime < as_hms(HOURS[i+1])) {
-      deptime <- as_hms(deptime + INTERVAL[i])
-      if (deptime < as_hms(HOURS[i+1]))  departures <- append(departures, deptime) 
+    # add further departure times, based on interval, in seconds
+    while (deptime < period_to_seconds(hms(HOURS[i+1]))) {
+      deptime <- deptime + INTERVAL[i]
+      if (deptime < period_to_seconds(hms(HOURS[i+1]))) {
+        departures <- append(departures, deptime)
+      }   
     }
   }
   
-  
+
   # set up srlStopTimes, srlTrips and srlRoutes tables
   # ---------------------------------------------------------------------------
   srlStopTimes <- tibble(trip_id = factor(),
