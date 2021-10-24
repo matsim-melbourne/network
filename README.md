@@ -3,6 +3,9 @@
 
 This page explains the steps for building a road network model for active transport simulation models such as MATSim, including active transportation related infrastructure and attribute.    
 
+## Publications
+- Jafari, A., Both, A., Singh, D., Gunn, L., & Giles-Corti, B. (2022). [Building the road network for city-scale active transport simulation models](https://doi.org/10.1016/j.simpat.2021.102398). *Simulation Modelling Practice and Theory*, 114, 102398 ( [Pre-print version](https://arxiv.org/abs/2104.03063) )
+
 ## Prerequisites
 * Postgres
 * GDAL/OGR
@@ -58,6 +61,3 @@ The sf library requires the following to run
 brew install gdal
 brew install udunits
 ```
-
-## Publications
-- Jafari, A., Both, A., Singh, D., Gunn, L., & Giles-Corti, B. (2021). [Building the road network for city-scale active transport simulation models](https://arxiv.org/abs/2104.03063). *arXiv preprint arXiv:2104.03063.*
