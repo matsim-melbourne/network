@@ -7,10 +7,9 @@ This page explains the steps for building a road network model for active transp
 - Jafari, A., Both, A., Singh, D., Gunn, L., & Giles-Corti, B. (2022). [Building the road network for city-scale active transport simulation models](https://doi.org/10.1016/j.simpat.2021.102398). *Simulation Modelling Practice and Theory*, 114, 102398 ( [Pre-print version](https://arxiv.org/abs/2104.03063) )
 
 ## Prerequisites
-* Postgres
-* GDAL/OGR
-* R
-* Required R packages
+* Postgres and postgis
+* GDAL
+* R 4.2+
 
 ## Building the network
 
@@ -35,6 +34,13 @@ Rscript -e 'source("NetworkGenerator.R"); makeNetwork("example")'
 ```
 
 ## Troubleshooting
+### Installing sf
+SF package in R requires a few dependencies, see https://r-spatial.github.io/sf/ for more details.
+
+### Password authentication error when using postgres
+One solution is to temporarly change the METHOD in `pg_hba.conf` from md5 to trust. See [this post](https://hassanannajjar.medium.com/how-to-fix-error-password-authentication-failed-for-the-user-in-postgresql-896e1fd880dc) for more details.
+
+
 ### Postgres install on macOS 10.15+
 ```
 brew install postgres
