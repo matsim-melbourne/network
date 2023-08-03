@@ -4,8 +4,8 @@ buildDefaultsDF <- function(){
     ~highway          , ~permlanes, ~freespeed, ~is_oneway, ~laneCapacity, ~is_cycle, ~is_walk, ~is_car, ~highway_order,
      "motorway"       ,  4        ,  (110/3.6),  0        ,  2000        ,  0       ,  0      ,  1     ,  1            ,
      "motorway_link"  ,  2        ,  (80/3.6) ,  0        ,  1500        ,  0       ,  0      ,  1     ,  8            ,
-     "trunk"          ,  3        ,  (100/3.6),  0        ,  2000        ,  0       ,  0      ,  1     ,  2            ,
-     "trunk_link"     ,  2        ,  (80/3.6) ,  0        ,  1500        ,  0       ,  0      ,  1     ,  9            ,
+     "trunk"          ,  3        ,  (100/3.6),  0        ,  2000        ,  1       ,  1      ,  1     ,  2            ,
+     "trunk_link"     ,  2        ,  (80/3.6) ,  0        ,  1500        ,  1       ,  1      ,  1     ,  9            ,
 
      "primary"        ,  2        ,  (80/3.6) ,  0        ,  1500        ,  1       ,  1      ,  1     ,  3            ,
      "primary_link"   ,  1        ,  (60/3.6) ,  0        ,  1500        ,  1       ,  1      ,  1     , 10            ,
