@@ -24,11 +24,7 @@ makeNetwork<-function(outputFileName="test"){
   desnificationMaxLengh=500
   densifyBikeways=F
 
-  # CORRECTION
-  # To add/remove specified links - see osmCorrection.R
-  # Change to TRUE if running on Greater Melbourne OSM, Otherwise, keep FALSE
-  # Also you can use the same function to correct networks for your region if needed
-  correctNetwork=F
+  # CAPACITY ADJUSTMENT
   # A flag for whether to multiply capacity of links shorter than 100m by 2 or not
   # In some cases such as when building network for simulation of small samples (e.g. <1%) it might be desired
   adjustCapacity=F
@@ -145,15 +141,8 @@ makeNetwork<-function(outputFileName="test"){
   echo("Processing OSM tags and joining with defaults\n")
   system.time( osmAttributes <- processOsmTags(osm_metadata,defaults_df))
   
-  # There are some roads in OSM that are not correctly attributed
-  # Use the function below to manually add their attributes based osm id
-  osmAttributesCorrected <- osmMetaCorrection(osmAttributes)
-  edgesOsm <- networkInput[[2]]
-  # Some network link corrections (+/-) specifically for Greater Melbourne OSM
-  if(correctNetwork) edgesOsm <- osmNetworkCorrection(networkInput)
-  
-  edgesAttributed <- edgesOsm %>%
-    inner_join(osmAttributesCorrected, by="osm_id") %>%
+  edgesAttributed <- networkInput[[2]] %>%
+    inner_join(osmAttributes, by="osm_id") %>%
     # dplyr::select(-osm_id,highway,highway_order)
     dplyr::select(-highway,highway_order)
   
