@@ -162,7 +162,8 @@ makeNetwork<-function(outputFileName="test"){
   # simplify intersections while preserving attributes and original geometry.
   system.time(intersectionsSimplified <- simplifyIntersections(largestComponent[[1]],
                                                                largestComponent[[2]],
-                                                               shortLinkLength))
+                                                               shortLinkLength,
+                                                               outputCrs))
   
   # Merge edges going between the same two nodes, picking the shortest geometry.
   # * One-way edges going in the same direction will be merged
@@ -171,14 +172,16 @@ makeNetwork<-function(outputFileName="test"){
   # * One-way edges will NOT be merged with two-way edges.
   # * Non-car edges do NOT count towards the merged lane count (permlanes)
   system.time(edgesCombined <- combineRedundantEdges(intersectionsSimplified[[1]],
-                                                     intersectionsSimplified[[2]]))
+                                                     intersectionsSimplified[[2]],
+                                                     outputCrs))
   
   # Merge one-way and two-way edges going between the same two nodes. In these 
   # cases, the merged attributes will be two-way.
   # This guarantees that there will only be a single edge between any two nodes.
   system.time(combinedUndirectedAndDirected <- 
                 combineUndirectedAndDirectedEdges(edgesCombined[[1]],
-                                                  edgesCombined[[2]]))
+                                                  edgesCombined[[2]],
+                                                  outputCrs))
   
   # If there is a chain of edges between intersections, merge them together
   system.time(edgesSimplified <- simplifyLines(combinedUndirectedAndDirected[[1]],
@@ -190,15 +193,18 @@ makeNetwork<-function(outputFileName="test"){
   
   # Do a second round of simplification.
   system.time(edgesCombined2 <- combineRedundantEdges(noDangles[[1]],
-                                                      noDangles[[2]]))
+                                                      noDangles[[2]],
+                                                      outputCrs))
   system.time(combinedUndirectedAndDirected2 <- 
                 combineUndirectedAndDirectedEdges(edgesCombined2[[1]],
-                                                  edgesCombined2[[2]]))
+                                                  edgesCombined2[[2]],
+                                                  outputCrs))
   
   system.time(edgesSimplified2 <- simplifyLines(combinedUndirectedAndDirected2[[1]],
                                                 combinedUndirectedAndDirected2[[2]]))
   system.time(edgesCombined3 <- combineRedundantEdges(edgesSimplified2[[1]],
-                                                      edgesSimplified2[[2]]))
+                                                      edgesSimplified2[[2]],
+                                                      outputCrs))
   
   networkMode <- addMode(edgesCombined3)
   
@@ -217,7 +223,8 @@ makeNetwork<-function(outputFileName="test"){
   # simplify geometry so all edges are straight lines
   system.time(networkDirect <-
                 makeEdgesDirect(networkDensified[[1]],
-                                networkDensified[[2]]))
+                                networkDensified[[2]],
+                                outputCrs))
   
   # add mode to edges, add type to nodes, change cycleway from numbers to text
   networkRestructured <- restructureData(networkDirect, highway_lookup,
@@ -270,8 +277,8 @@ makeNetwork<-function(outputFileName="test"){
   echo("|               **Launching Output Writing**           |\n")
   echo("--------------------------------------------------------\n")
   
-  if(writeSqlite) system.time(exportSQlite(networkFinal, outputDir))
-  if(writeShp) system.time(exportShp(networkFinal, outputDir))
+  if(writeSqlite) system.time(exportSQlite(networkFinal, outputDir, outputCrs))
+  if(writeShp) system.time(exportShp(networkFinal, outputDir, outputCrs))
   if(writeXml) system.time(exportXML(networkFinal, outputDir)) 
 }
 

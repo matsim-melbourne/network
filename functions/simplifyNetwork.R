@@ -1,4 +1,4 @@
-simplifyNetwork <- function(n_df,l_df,osm_metadata, shortLinkLength = 20){
+simplifyNetwork <- function(n_df,l_df,osm_metadata, shortLinkLength = 20, outputCrs){
   # l_df=lines_np
   # n_df=nodes_np
   # shortLinkLength = 20
@@ -55,7 +55,7 @@ simplifyNetwork <- function(n_df,l_df,osm_metadata, shortLinkLength = 20){
     filter(!id %in% comp_df$node_id) %>%
     rbind(dplyr::select(comp_df_centroid,id=cluster_id,is_roundabout,is_signal,X,Y)) %>%
     mutate(geom=paste0("POINT(",X," ",Y,")")) %>%
-    st_as_sf(wkt = "geom", crs = 28355)
+    st_as_sf(wkt = "geom", crs = outputCrs)
   
   # keeping only the long edges, we alter any endpoints that are part of a
   # cluster, replacing them with the cluster id and the centroid coordinates
@@ -72,7 +72,7 @@ simplifyNetwork <- function(n_df,l_df,osm_metadata, shortLinkLength = 20){
     mutate(toY=ifelse(is.na(cluster_id),toY,Y)) %>%
     dplyr::select(road_type,length,from_id,to_id,fromX,fromY,toX,toY) %>%
     mutate(geom=paste0("LINESTRING(",fromX," ",fromY,",",toX," ",toY,")")) %>%
-    st_as_sf(wkt = "geom", crs = 28355)
+    st_as_sf(wkt = "geom", crs = outputCrs)
   
   
   # remove the disconnected bits
