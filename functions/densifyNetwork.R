@@ -86,14 +86,14 @@ densifyNetwork <- function(networkList, minimum_length=400, densifyBikeways=F){
   
   links_combined <- bind_rows(
     links_unsegmented,
-    links_segmented
+    links_segmented %>% st_set_crs(st_crs(links_unsegmented))
   ) %>%
     dplyr::select(-tmp_id) %>%
     st_sf()
   
   nodes_combined <- bind_rows(
     nodes_df,
-    nodes_segmented
+    nodes_segmented %>% st_set_crs(st_crs(nodes_df))
   ) %>%
     st_sf()
   
