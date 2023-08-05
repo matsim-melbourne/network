@@ -503,12 +503,12 @@ exportGtfsSchedule <- function(links,
       str<-paste0(str,"    </transitRoute>\n")
     }
     
-    if (i%%writeInterval==0 || i==nrow(vehicleTripMatching)) {
+    if (i%%writeInterval==0 || i==length(transitRoutes)) {
       cat(str,file=outxml,append=TRUE)
       str<-"" # clear the buffer after writing it out
     }
     # report progress
-    if (i%%50==0 || i==nrow(vehicleTripMatching)) printProgress(i,nrow(vehicleTripMatching),' vehicleTripMatching')
+    if (i%%50==0 || i==length(transitRoutes)) printProgress(i,length(transitRoutes),' vehicleTripMatching')
   }
   cat(paste0("  </transitLine>\n"),file=outxml,append=TRUE)
   cat(paste0("</transitSchedule>\n"),file=outxml,append=TRUE)
