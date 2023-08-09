@@ -11,7 +11,7 @@ makeNetwork<-function(outputFileName="test"){
   # Note that osm.pbf format is not yet supported
   osmExtract='./data/melbourne.osm'
   # If procesOsm=F, set the following to the network sqlite file
-  networkSqlite="data/network.sqlite"
+  networkSqlite="./data/melbourne_network_unconfigured.sqlite"
 
   # SIMPLIFICATION
   shortLinkLength=20
@@ -22,7 +22,7 @@ makeNetwork<-function(outputFileName="test"){
 
   # DENSIFICATION
   desnificationMaxLengh=500
-  densifyBikeways=F
+  densifyBikeways=T
 
   # CAPACITY ADJUSTMENT
   # A flag for whether to multiply capacity of links shorter than 100m by 2 or not
@@ -31,11 +31,11 @@ makeNetwork<-function(outputFileName="test"){
 
   # ELEVATION
   # A flag for whether to add elevation or not
-  addElevation=F
+  addElevation=T
   # Digital elevation model file - make sure it is in the same coordinate system as your network
-  demFile= 'data/DEMx10EPSG28355.tif'
+  demFile= "./data/DEM_melbourne.tif"
   # DEM's multiplier- set to 1 if DEM contains actual elevation
-  ElevationMultiplier=10
+  ElevationMultiplier=1
 
   # GTFS
   addGtfs=F
