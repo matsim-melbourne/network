@@ -270,7 +270,13 @@ makeNetwork<-function(outputFileName="test"){
                                                outputCrs=outputCrs)) 
   }
   
-  networkFinal <- networkRestructured
+  # Make network oneway (required because cycling impedances such as level of 
+  # traffic stress and slope may be different in each direction)
+  echo("Making all links one way\n")
+  networkOneway <- makeEdgesOneway(networkRestructured[[1]], 
+                                   networkRestructured[[2]])
+  
+  networkFinal <- networkOneway
   
   # writing outputs
   echo("========================================================\n")
