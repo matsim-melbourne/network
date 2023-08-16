@@ -30,6 +30,11 @@ exportSQlite <- function(networkFinal, outputDir, outputCrs){
   st_write(networkFinal[[1]], paste0(outputDir,'/network.sqlite'),
            layer = 'nodes', driver = 'SQLite', layer_options = 'GEOMETRY=AS_XY',
            delete_layer = T)
+  if (length(networkFinal) > 2) {
+    st_write(networkFinal[[3]], paste0(outputDir,'/network.sqlite'),
+             layer = 'destinations', driver = 'SQLite', 
+             layer_options = 'GEOMETRY=AS_XY', delete_layer = T)
+  }
   
   echo(paste0('Finished generating the sqlite output\n'))
 }
@@ -64,6 +69,11 @@ exportShp <- function(networkFinal, outputDir, outputCrs){
   st_write(networkFinal[[1]], paste0(shpDir,'/nodes.shp'), 
            driver = "ESRI Shapefile", layer_options = 'GEOMETRY=AS_XY', 
            delete_layer = T)
+  if (length(networkFinal) > 2) {
+    st_write(networkFinal[[3]], paste0(shpDir,'/destinations.shp'),
+             driver = "ESRI Shapefile", layer_options = 'GEOMETRY=AS_XY', 
+             delete_layer = T)
+  }
   
   echo(paste0('Finished generating the ShapeFile output\n'))
   

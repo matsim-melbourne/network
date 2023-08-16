@@ -36,6 +36,12 @@ makeNetwork<-function(outputFileName="test"){
   demFile= "./data/DEM_melbourne.tif"
   # DEM's multiplier- set to 1 if DEM contains actual elevation
   ElevationMultiplier=1
+  
+  # DESTINATIONS
+  # A flag for whether to add a destinations layer (drawn from OSM) or not
+  addDestinationLayer=T
+  # OSM extract for destinations, in .osm.pbf format
+  osmPbfExtract="./data/melbourne_australia.osm.pbf"
 
   # GTFS
   addGtfs=F
@@ -67,6 +73,8 @@ makeNetwork<-function(outputFileName="test"){
  library(tidytransit)
  library(hablar)
  library(hms)
+ library(osmextract)
+ library(tidyr)
 
   # Building the output folder structure ------------------------------------
 
@@ -220,6 +228,14 @@ makeNetwork<-function(outputFileName="test"){
   networkDensified <- densifyNetwork(networkConnected,desnificationMaxLengh,
                                      densifyBikeways)
   
+  # adding destinations layer
+  if (addDestinationLayer) {
+    destinations <- addDestinations(networkDensified[[1]],
+                                    networkDensified[[2]],
+                                    osmPbfExtract,
+                                    outputCrs)
+  }
+
   # simplify geometry so all edges are straight lines
   system.time(networkDirect <-
                 makeEdgesDirect(networkDensified[[1]],
@@ -277,6 +293,10 @@ makeNetwork<-function(outputFileName="test"){
                                    networkRestructured[[2]])
   
   networkFinal <- networkOneway
+  
+  if (addDestinationLayer) {
+    networkFinal[[3]] <- destinations
+  }
   
   # writing outputs
   echo("========================================================\n")
