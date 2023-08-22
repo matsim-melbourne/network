@@ -1,7 +1,7 @@
 # nodes_current<-edgesCombined[[1]]
 # edges_current<-edgesCombined[[2]]
 
-combineUndirectedAndDirectedEdges <- function(nodes_current,edges_current){
+combineUndirectedAndDirectedEdges <- function(nodes_current,edges_current,outputCrs){
   
   edges_current <- edges_current %>%
     mutate(uid=row_number()) %>%
@@ -80,7 +80,7 @@ combineUndirectedAndDirectedEdges <- function(nodes_current,edges_current){
     inner_join(edges_grouped2, by="uid") %>%
     dplyr::select(-uid) %>%
     st_sf() %>%
-    st_set_crs(28355)
+    st_set_crs(outputCrs)
 
   return(list(nodes_current,edges_all_geom))
 }

@@ -11,7 +11,7 @@ makeNetwork<-function(outputFileName="test"){
   # Note that osm.pbf format is not yet supported
   osmExtract='./data/melbourne.osm'
   # If procesOsm=F, set the following to the network sqlite file
-  networkSqlite="data/network.sqlite"
+  networkSqlite="./data/melbourne_network_unconfigured.sqlite"
 
   # SIMPLIFICATION
   shortLinkLength=20
@@ -22,24 +22,26 @@ makeNetwork<-function(outputFileName="test"){
 
   # DENSIFICATION
   desnificationMaxLengh=500
-  densifyBikeways=F
+  densifyBikeways=T
 
-  # CORRECTION
-  # To add/remove specified links - see osmCorrection.R
-  # Change to TRUE if running on Greater Melbourne OSM, Otherwise, keep FALSE
-  # Also you can use the same function to correct networks for your region if needed
-  correctNetwork=F
+  # CAPACITY ADJUSTMENT
   # A flag for whether to multiply capacity of links shorter than 100m by 2 or not
   # In some cases such as when building network for simulation of small samples (e.g. <1%) it might be desired
   adjustCapacity=F
 
   # ELEVATION
   # A flag for whether to add elevation or not
-  addElevation=F
+  addElevation=T
   # Digital elevation model file - make sure it is in the same coordinate system as your network
-  demFile= 'data/DEMx10EPSG28355.tif'
+  demFile= "./data/DEM_melbourne.tif"
   # DEM's multiplier- set to 1 if DEM contains actual elevation
-  ElevationMultiplier=10
+  ElevationMultiplier=1
+  
+  # DESTINATIONS
+  # A flag for whether to add a destinations layer (drawn from OSM) or not
+  addDestinationLayer=T
+  # OSM extract for destinations, in .osm.pbf format
+  osmPbfExtract="./data/melbourne_australia.osm.pbf"
 
   # GTFS
   addGtfs=F
@@ -71,6 +73,8 @@ makeNetwork<-function(outputFileName="test"){
  library(tidytransit)
  library(hablar)
  library(hms)
+ library(osmextract)
+ library(tidyr)
 
   # Building the output folder structure ------------------------------------
 
@@ -145,15 +149,8 @@ makeNetwork<-function(outputFileName="test"){
   echo("Processing OSM tags and joining with defaults\n")
   system.time( osmAttributes <- processOsmTags(osm_metadata,defaults_df))
   
-  # There are some roads in OSM that are not correctly attributed
-  # Use the function below to manually add their attributes based osm id
-  osmAttributesCorrected <- osmMetaCorrection(osmAttributes)
-  edgesOsm <- networkInput[[2]]
-  # Some network link corrections (+/-) specifically for Greater Melbourne OSM
-  if(correctNetwork) edgesOsm <- osmNetworkCorrection(networkInput)
-  
-  edgesAttributed <- edgesOsm %>%
-    inner_join(osmAttributesCorrected, by="osm_id") %>%
+  edgesAttributed <- networkInput[[2]] %>%
+    inner_join(osmAttributes, by="osm_id") %>%
     # dplyr::select(-osm_id,highway,highway_order)
     dplyr::select(-highway,highway_order)
   
@@ -173,7 +170,8 @@ makeNetwork<-function(outputFileName="test"){
   # simplify intersections while preserving attributes and original geometry.
   system.time(intersectionsSimplified <- simplifyIntersections(largestComponent[[1]],
                                                                largestComponent[[2]],
-                                                               shortLinkLength))
+                                                               shortLinkLength,
+                                                               outputCrs))
   
   # Merge edges going between the same two nodes, picking the shortest geometry.
   # * One-way edges going in the same direction will be merged
@@ -182,14 +180,16 @@ makeNetwork<-function(outputFileName="test"){
   # * One-way edges will NOT be merged with two-way edges.
   # * Non-car edges do NOT count towards the merged lane count (permlanes)
   system.time(edgesCombined <- combineRedundantEdges(intersectionsSimplified[[1]],
-                                                     intersectionsSimplified[[2]]))
+                                                     intersectionsSimplified[[2]],
+                                                     outputCrs))
   
   # Merge one-way and two-way edges going between the same two nodes. In these 
   # cases, the merged attributes will be two-way.
   # This guarantees that there will only be a single edge between any two nodes.
   system.time(combinedUndirectedAndDirected <- 
                 combineUndirectedAndDirectedEdges(edgesCombined[[1]],
-                                                  edgesCombined[[2]]))
+                                                  edgesCombined[[2]],
+                                                  outputCrs))
   
   # If there is a chain of edges between intersections, merge them together
   system.time(edgesSimplified <- simplifyLines(combinedUndirectedAndDirected[[1]],
@@ -201,15 +201,18 @@ makeNetwork<-function(outputFileName="test"){
   
   # Do a second round of simplification.
   system.time(edgesCombined2 <- combineRedundantEdges(noDangles[[1]],
-                                                      noDangles[[2]]))
+                                                      noDangles[[2]],
+                                                      outputCrs))
   system.time(combinedUndirectedAndDirected2 <- 
                 combineUndirectedAndDirectedEdges(edgesCombined2[[1]],
-                                                  edgesCombined2[[2]]))
+                                                  edgesCombined2[[2]],
+                                                  outputCrs))
   
   system.time(edgesSimplified2 <- simplifyLines(combinedUndirectedAndDirected2[[1]],
                                                 combinedUndirectedAndDirected2[[2]]))
   system.time(edgesCombined3 <- combineRedundantEdges(edgesSimplified2[[1]],
-                                                      edgesSimplified2[[2]]))
+                                                      edgesSimplified2[[2]],
+                                                      outputCrs))
   
   networkMode <- addMode(edgesCombined3)
   
@@ -225,10 +228,19 @@ makeNetwork<-function(outputFileName="test"){
   networkDensified <- densifyNetwork(networkConnected,desnificationMaxLengh,
                                      densifyBikeways)
   
+  # adding destinations layer
+  if (addDestinationLayer) {
+    destinations <- addDestinations(networkDensified[[1]],
+                                    networkDensified[[2]],
+                                    osmPbfExtract,
+                                    outputCrs)
+  }
+
   # simplify geometry so all edges are straight lines
   system.time(networkDirect <-
                 makeEdgesDirect(networkDensified[[1]],
-                                networkDensified[[2]]))
+                                networkDensified[[2]],
+                                outputCrs))
   
   # add mode to edges, add type to nodes, change cycleway from numbers to text
   networkRestructured <- restructureData(networkDirect, highway_lookup,
@@ -274,15 +286,25 @@ makeNetwork<-function(outputFileName="test"){
                                                outputCrs=outputCrs)) 
   }
   
-  networkFinal <- networkRestructured
+  # Make network oneway (required because cycling impedances such as level of 
+  # traffic stress and slope may be different in each direction)
+  echo("Making all links one way\n")
+  networkOneway <- makeEdgesOneway(networkRestructured[[1]], 
+                                   networkRestructured[[2]])
+  
+  networkFinal <- networkOneway
+  
+  if (addDestinationLayer) {
+    networkFinal[[3]] <- destinations
+  }
   
   # writing outputs
   echo("========================================================\n")
   echo("|               **Launching Output Writing**           |\n")
   echo("--------------------------------------------------------\n")
   
-  if(writeSqlite) system.time(exportSQlite(networkFinal, outputDir))
-  if(writeShp) system.time(exportShp(networkFinal, outputDir))
+  if(writeSqlite) system.time(exportSQlite(networkFinal, outputDir, outputCrs))
+  if(writeShp) system.time(exportShp(networkFinal, outputDir, outputCrs))
   if(writeXml) system.time(exportXML(networkFinal, outputDir)) 
 }
 

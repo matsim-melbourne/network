@@ -5,7 +5,7 @@ addGtfsLinks <- function(outputLocation="./test/",
                          analysis_start = as.Date("2019-10-11","%Y-%m-%d"), 
                          analysis_end = as.Date("2019-10-17","%Y-%m-%d"),
                          studyRegion=NA,
-                         outputCrs=28355){
+                         outputCrs=outputCrs){
   # outputLocation="./gtfs/"
   # nodes=networkRestructured[[1]]
   # links=networkRestructured[[2]]
@@ -123,7 +123,7 @@ processGtfs <- function(outputLocation="./test/",
     st_snap_to_grid(1)
   
   # only want stops within the study region
-  if(!is.na(st_geometry(studyRegion))){
+  if(!is.na(studyRegion)){
     message("Cropping to study region")
     validStops <- validStops %>%
       filter(lengths(st_intersects(., studyRegion)) > 0)
@@ -503,12 +503,12 @@ exportGtfsSchedule <- function(links,
       str<-paste0(str,"    </transitRoute>\n")
     }
     
-    if (i%%writeInterval==0 || i==nrow(vehicleTripMatching)) {
+    if (i%%writeInterval==0 || i==length(transitRoutes)) {
       cat(str,file=outxml,append=TRUE)
       str<-"" # clear the buffer after writing it out
     }
     # report progress
-    if (i%%50==0 || i==nrow(vehicleTripMatching)) printProgress(i,nrow(vehicleTripMatching),' vehicleTripMatching')
+    if (i%%50==0 || i==length(transitRoutes)) printProgress(i,length(transitRoutes),' vehicleTripMatching')
   }
   cat(paste0("  </transitLine>\n"),file=outxml,append=TRUE)
   cat(paste0("</transitSchedule>\n"),file=outxml,append=TRUE)
