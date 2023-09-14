@@ -30,7 +30,6 @@ ogr2ogr -update -overwrite -nln roads -f "SQLite" -dsco SPATIALITE=YES \
       (other_tags IS NULL OR
        (other_tags NOT LIKE '%busbar%' AND \
         other_tags NOT LIKE '%abandoned%' AND \
-        other_tags NOT LIKE '%parking%' AND \
         other_tags NOT LIKE '%\"access\"=>\"private\"%')) " \
   ./data/temp.sqlite $extract
 #      highway NOT LIKE '%service%' AND \
@@ -56,7 +55,6 @@ ogr2ogr -update -overwrite -nln pt -f "SQLite" -dialect SQLite -sql \
     WHERE other_tags LIKE '%railway%' AND \
       other_tags NOT LIKE '%busbar%' AND \
       other_tags NOT LIKE '%abandoned%' AND \
-      other_tags NOT LIKE '%parking%' AND \
       other_tags NOT LIKE '%miniature%' AND \
       other_tags NOT LIKE '%proposed%' AND \
       other_tags NOT LIKE '%disused%' AND \
