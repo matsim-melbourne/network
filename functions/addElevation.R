@@ -5,7 +5,7 @@ addElevation2Nodes <- function(nodes, rasterFile, multiplier=1){
 }
 
 addElevation2Links <- function(network){
-  network <- networkRestructured
+  # network <- networkRestructured
   nodes <- network[[1]]
   links <- network[[2]]
   
