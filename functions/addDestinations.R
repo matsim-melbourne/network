@@ -9,7 +9,7 @@
 addDestinations <- function(nodes_current, 
                              edges_current, 
                              osmPbfExtract,
-                             outputCRS) {
+                             outputCrs) {
   
   # nodes_current = networkDensified[[1]]
   # edges_current = networkDensified[[2]]
@@ -98,7 +98,8 @@ addDestinations <- function(nodes_current,
   destination.pt <- 
     bind_rows(destination.layer(points),
               # add stations (from point, polygons and lines) to point table
-              getStation() %>% mutate(dest_type = "railway_station")) %>%
+              getStation(points, polygons, lines) %>% 
+                mutate(dest_type = "railway_station")) %>%
     mutate(dest_id = row_number())
   
   destination.poly <- 

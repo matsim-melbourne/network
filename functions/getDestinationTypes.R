@@ -129,7 +129,7 @@ getCafe <- function(layer) {
 # Returns list of  stations as points
 # Note the buffer distance of 100m below; closest railway stations in Melbourne are
 # Riversdale & Willison (about 420m)
-getStation <- function() {
+getStation <- function(points, polygons, lines) {
   # general filter to find station objects
   filterStation <- function(layer) {
     return(layer %>%
