@@ -4,9 +4,7 @@ makeNetwork<-function(outputFileName="test"){
   
   # INPUT NETWORK 
   # Set this to your desired cooridinate system for the network
-  outputCrs=28355  # Melbourne
-  # outputCrs=28356  # Brisbane
-  
+  outputCrs=28355
   # A flag for whether process raw osm extract or not
   processOsm=F
   # If processOsm=T, Set this to your osm extract file name, e.g., melbourne.osm
@@ -14,7 +12,6 @@ makeNetwork<-function(outputFileName="test"){
   osmExtract='./data/melbourne.osm'
   # If procesOsm=F, set the following to the network sqlite file
   networkSqlite="./data/melbourne_network_unconfigured.sqlite"
-  # networkSqlite="./data/brisbane_network_unconfigured.sqlite"
 
   # SIMPLIFICATION
   shortLinkLength=20
@@ -45,8 +42,7 @@ makeNetwork<-function(outputFileName="test"){
   addDestinationLayer=T
   # OSM extract for destinations, in .osm.pbf format
   osmPbfExtract="./data/melbourne_australia.osm.pbf"
-  # osmPbfExtract="./data/Brisbane.osm.pbf"
-  
+
   # GTFS
   addGtfs=F
   gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip" # link to the GTFS .zip file
