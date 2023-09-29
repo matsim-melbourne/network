@@ -42,6 +42,14 @@ makeNetwork<-function(outputFileName="test"){
   addDestinationLayer=T
   # OSM extract for destinations, in .osm.pbf format
   osmPbfExtract="./data/melbourne_australia.osm.pbf"
+  
+  # NDVI
+  # A flag for whether to add NDVI or not
+  addNDVI=T
+  # NDVI file - make sure it is in the same coordinate system as your network
+  ndviFile="./data/NDVI_1600mBuffer_Melbourne_reprojected.tif"
+  # Buffer distance for finding average NDVI for links
+  ndviBuffDist=30
 
   # GTFS
   addGtfs=F
@@ -67,6 +75,7 @@ makeNetwork<-function(outputFileName="test"){
  library(stringr)
  library(igraph)
  library(raster)
+ library(terra)
  library(rgdal)
  library(purrr)
  library(lwgeom)
@@ -96,6 +105,7 @@ makeNetwork<-function(outputFileName="test"){
   echo(paste0("- Cropping to a test area:                        ", crop2Area,"\n"))
   echo(paste0("- Shortest link length in network simplification: ", shortLinkLength,"\n"))
   echo(paste0("- Adding elevation:                               ", addElevation,"\n"))
+  echo(paste0("- Adding NDVI:                                    ", addNDVI,"\n"))
   echo(paste0("- Adding PT from GTFS:                            ", addGtfs,"\n"))
   echo(paste0("- Writing outputs in SQLite format:               ", writeSqlite,"\n"))
   echo(paste0("- Writing outputs in ShapeFile format:            ", writeShp,"\n"))
@@ -227,6 +237,13 @@ makeNetwork<-function(outputFileName="test"){
   if (addElevation==T & densifyBikeways==F) message("Consider changing densifyBikeways to true when addElevation is true to ge a more accurate slope esimation for bikeways")
   networkDensified <- densifyNetwork(networkConnected,desnificationMaxLengh,
                                      densifyBikeways)
+  
+  # Adding NDVI to links
+  if(addNDVI) {
+    system.time(networkDensified[[2]] <- addNDVI2Links(networkDensified[[2]],
+                                                       ndviFile,
+                                                       ndviBuffDist))
+  }
   
   # adding destinations layer
   if (addDestinationLayer) {

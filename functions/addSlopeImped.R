@@ -12,7 +12,7 @@ addSlopeImped <- function(nodes_current, edges_current) {
   
   edges_current <- edges_current %>%
     
-    # some coastal links are missing elevation; make slope 0
+    # some links (eg coastal) are missing elevation; make slope 0
     mutate(slope_pct = ifelse(is.na(slope_pct), 0, slope_pct)) %>%
   
   # 50m of length per 1m of climb
