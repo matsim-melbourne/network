@@ -46,6 +46,9 @@ makeEdgesOneway <- function(nodes_current, edges_current) {
   if ("slope_pct" %in% colnames(edges_twoway_reversed)) {
     required_fields <- c(required_fields, "slope_pct")
   }
+  if ("ndvi" %in% colnames(edges_twoway_reversed)) {
+    required_fields <- c(required_fields, "ndvi")
+  }
   edges_twoway_reversed <- edges_twoway_reversed %>%
     dplyr::select(all_of(required_fields))
   
