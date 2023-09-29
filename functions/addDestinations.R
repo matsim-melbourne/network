@@ -106,16 +106,22 @@ addDestinations <- function(nodes_current,
     destination.layer(polygons) %>%
     mutate(dest_id = max(destination.pt$dest_id) + row_number())
   
-  # Some times polygons are not valid and have only two points.
+  # [AJ] Some times polygons are not valid and have only two points.
   # For now I am removing those, this needs to be fixed 
-  invalid.poly <- NULL
-  for (i in 1:nrow(destination.poly) ){
-    if(sapply(st_geometry(destination.poly)[[i]], function(x) nrow(x[[1]])) < 3){
-      invalid.poly <- cbind(invalid.poly, i) }
-    }
-  destination.poly <- destination.poly[-c(invalid.poly),]
+  
+  # [SP to AJ] The 'invalid.poly' part of this throws errors for Brisbane for
+  # multipart geometries; commented out for now; while 2-point polygons
+  # are clearly wrongly digitised, do they matter?
+  
+  # invalid.poly <- NULL
+  # for (i in 1:nrow(destination.poly) ){
+  #   if(sapply(st_geometry(destination.poly)[[i]], function(x) nrow(x[[1]])) < 3){
+  #     invalid.poly <- cbind(invalid.poly, i) }
+  #   }
+  # destination.poly <- destination.poly[-c(invalid.poly),]
 
-  destination.poly <- destination.poly[- which(!st_is_valid(destination.poly$geometry)), ]
+  # destination.poly <- destination.poly[- which(!st_is_valid(destination.poly$geometry)), ]
+  destination.poly <- destination.poly[which(st_is_valid(destination.poly$geometry)), ]
   
   # # check numbers of each destination type
   # chk <- full_join(destination.poly %>%
