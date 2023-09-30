@@ -2,23 +2,58 @@ makeNetwork<-function(outputFileName="test"){
   # outputFileName="network"
   # Parameters --------------------------------------------------------------
   
+  # CITY AND ITS PARAMETERS
+  # Set city
+  city = "Melbourne"
+  # city = "Brisbane"
+  
+  # City parameters to be set
+  # •	outputCrs: desired coordinate system for network
+  # •	osmExtract: if 'processOsm=T', OSM extract file in .osm format (.osm.pbf 
+  #   not supported for this step)
+  # •	networkSqlite: if 'processOsm=F', network sqlite file
+  # •	cropAreaPoly: if 'crop2TestArea=T' cropArea location from 
+  #   https://github.com/JamesChevalier/cities/tree/master/australia/victoria 
+  #   (only supported for Victoria at this stage)
+  # •	demFile: if 'addElevation=T', digital elevation model raster file (must be 
+  #   in same coordinate system as network)
+  # •	osmPbfExtract: if 'addDestinationLayer=T', OSM extract for destinations, 
+  #   in .osm.pbf format
+  # •	ndviFile: if 'addNDVI=T', raster file with NDVI values (must be in same
+  #   coordinate system as network)
+  # •	gtfs_feed: if 'addGtfs=T', zip file containing GTFS data (must also set
+  #   start and end dates in GTFS section)
+  
+  if (city == "Melbourne") {
+    outputCrs = 28355
+    osmExtract = "./data/melbourne.osm"
+    networkSqlite = "./data/melbourne_network_unconfigured.sqlite"
+    cropAreaPoly = "city-of-melbourne_victoria"
+    demFile = "./data/DEM_melbourne.tif"
+    osmPbfExtract = "./data/melbourne_australia.osm.pbf"
+    ndviFile = "./data/NDVI_1600mBuffer_Melbourne_reprojected.tif"
+    gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip"
+    
+  } else if (city == "Brisbane") {
+    outputCrs = 28356
+    osmExtract = ""  # must set 'processOsm=F'
+    networkSqlite = "./data/brisbane_network_unconfigured.sqlite"
+    cropAreaPoly = ""  # must set 'crop2TestArea=F'
+    demFile = "./data/5m_DEM_reprojected.tif" # MIGHT NOT BE FINAL FILE
+    osmPbfExtract = "./data/brisbane_australia.osm.pbf"
+    ndviFile = ""  # must set 'addNDVI=F'
+    gtfs_feed = ""  # must set 'addGtfs=F'
+
+  }
+
   # INPUT NETWORK 
-  # Set this to your desired cooridinate system for the network
-  outputCrs=28355
-  # A flag for whether process raw osm extract or not
+  # A flag for whether process raw osm extract or not (if not, must have network sqlite)
   processOsm=F
-  # If processOsm=T, Set this to your osm extract file name, e.g., melbourne.osm
-  # Note that osm.pbf format is not yet supported
-  osmExtract='./data/melbourne.osm'
-  # If procesOsm=F, set the following to the network sqlite file
-  networkSqlite="./data/melbourne_network_unconfigured.sqlite"
 
   # SIMPLIFICATION
   shortLinkLength=20
   minDangleLinkLengh=500
   crop2Area=F
-  # If crop2TestArea=T, find your area from https://github.com/JamesChevalier/cities/tree/master/australia/victoria and set the following to its poly name
-  cropAreaPoly="city-of-melbourne_victoria"
 
   # DENSIFICATION
   desnificationMaxLengh=500
@@ -32,28 +67,20 @@ makeNetwork<-function(outputFileName="test"){
   # ELEVATION
   # A flag for whether to add elevation or not
   addElevation=T
-  # Digital elevation model file - make sure it is in the same coordinate system as your network
-  demFile= "./data/DEM_melbourne.tif"
-  # DEM's multiplier- set to 1 if DEM contains actual elevation
   ElevationMultiplier=1
   
   # DESTINATIONS
   # A flag for whether to add a destinations layer (drawn from OSM) or not
   addDestinationLayer=T
-  # OSM extract for destinations, in .osm.pbf format
-  osmPbfExtract="./data/melbourne_australia.osm.pbf"
-  
+
   # NDVI
   # A flag for whether to add NDVI or not
   addNDVI=T
-  # NDVI file - make sure it is in the same coordinate system as your network
-  ndviFile="./data/NDVI_1600mBuffer_Melbourne_reprojected.tif"
   # Buffer distance for finding average NDVI for links
   ndviBuffDist=30
 
   # GTFS
   addGtfs=F
-  gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip" # link to the GTFS .zip file
   analysis_start = as.Date("2019-10-11","%Y-%m-%d") # Transit Feed start date
   analysis_end = as.Date("2019-10-17","%Y-%m-%d") # Transit Feed end date
 
@@ -105,6 +132,7 @@ makeNetwork<-function(outputFileName="test"){
   echo(paste0("- Cropping to a test area:                        ", crop2Area,"\n"))
   echo(paste0("- Shortest link length in network simplification: ", shortLinkLength,"\n"))
   echo(paste0("- Adding elevation:                               ", addElevation,"\n"))
+  echo(paste0("- Adding destination layer:                       ", addDestinationLayer,"\n"))
   echo(paste0("- Adding NDVI:                                    ", addNDVI,"\n"))
   echo(paste0("- Adding PT from GTFS:                            ", addGtfs,"\n"))
   echo(paste0("- Writing outputs in SQLite format:               ", writeSqlite,"\n"))
@@ -279,7 +307,7 @@ makeNetwork<-function(outputFileName="test"){
   }
   
   # Adding PT pseudo-network based on GTFS
-  # Adjust your analysis start date, end data and gtfs feed name below
+  # Adjust your analysis start date, end data and gtfs feed name above
   if(addGtfs) {
     # Adjust these parameters based on your GTFS file
     if(file.exists("data/studyRegion.sqlite")){
