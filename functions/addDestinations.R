@@ -93,18 +93,25 @@ addDestinations <- function(nodes_current,
   # ----------------------------------#
   echo("Finding destinations and their nearby nodes\n")
   
-  # create tables for points and polygons, and allocate unique id's (so features 
-  # multiple multiple nodes can be grouped by the id where required)
+  # create tables for points and polygons, allocate unique id's (so features 
+  # multiple multiple nodes can be grouped by the id where required),
+  # and store area and location details
   destination.pt <- 
     bind_rows(destination.layer(points),
               # add stations (from point, polygons and lines) to point table
               getStation(points, polygons, lines) %>% 
                 mutate(dest_type = "railway_station")) %>%
-    mutate(dest_id = row_number())
+    mutate(dest_id = row_number(),
+           area_m2 = 0,
+           centroid_x = st_coordinates(.)[, 1],
+           centroid_y = st_coordinates(.)[, 2])
   
   destination.poly <- 
     destination.layer(polygons) %>%
-    mutate(dest_id = max(destination.pt$dest_id) + row_number())
+    mutate(dest_id = max(destination.pt$dest_id) + row_number(),
+           area_m2 = as_numeric(st_area(.)),
+           centroid_x = st_coordinates(st_centroid(.))[, 1],
+           centroid_y = st_coordinates(st_centroid(.))[, 2])
   
   # Remove any invalid polygons as they may cause errors
   destination.poly <- destination.poly[which(st_is_valid(destination.poly$geometry)), ]
