@@ -125,7 +125,15 @@ getCafe <- function(layer) {
   return(layer %>% filter(amenity == "cafe"))
 }
 
-# 8 railway stations ----
+
+# 8 parking ----
+getParking <- function(layer) {
+  return(layer %>% filter(amenity == "parking" &
+                            !access %in% c("no", "private")))
+}
+
+
+# 9 railway stations ----
 # Returns list of  stations as points
 # Note the buffer distance of 100m below; closest railway stations in Melbourne are
 # Riversdale & Willison (about 420m)
