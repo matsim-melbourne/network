@@ -133,35 +133,37 @@ getParking <- function(layer) {
 }
 
 
-# 9 railway stations ----
-# Returns list of  stations as points
-# Note the buffer distance of 100m below; closest railway stations in Melbourne are
-# Riversdale & Willison (about 420m)
-getStation <- function(points, polygons, lines) {
-  # general filter to find station objects
-  filterStation <- function(layer) {
-    return(layer %>%
-             filter((public_transport == "station" | public_transport == "stop_position") & 
-                      (railway == "station" | railway == "stop" | train == "yes" | 
-                         grepl("train", tolower(network)) | grepl("train", tolower(operator))) &
-                      (is.na(tourism) |  tourism != "yes") &
-                      (is.na(railway) | railway != "construction")))
-  }
-  
-  # find each object, and buffer to 100m
-  buff.dist <- 100
-  station.pt <- filterStation(points) %>% st_buffer(buff.dist)
-  station.poly <- filterStation(polygons) %>% st_buffer(buff.dist)
-  station.line <- filterStation(lines) %>% st_buffer(buff.dist)
-  
-  # dissolve, then separate to individual polygons
-  stations <- bind_rows(station.pt, station.poly, station.line) %>%
-    st_union() %>%
-    st_as_sf() %>%
-    st_cast("POLYGON") %>%
-    st_centroid() %>%
-    # label geometry column
-    rename(geometry = x)
-  
-}
+# 9 railway stations [not used] ----
+# See getPtStops.R instead
+
+# # Returns list of  stations as points
+# # Note the buffer distance of 100m below; closest railway stations in Melbourne are
+# # Riversdale & Willison (about 420m)
+# getStation <- function(points, polygons, lines) {
+#   # general filter to find station objects
+#   filterStation <- function(layer) {
+#     return(layer %>%
+#              filter((public_transport == "station" | public_transport == "stop_position") & 
+#                       (railway == "station" | railway == "stop" | train == "yes" | 
+#                          grepl("train", tolower(network)) | grepl("train", tolower(operator))) &
+#                       (is.na(tourism) |  tourism != "yes") &
+#                       (is.na(railway) | railway != "construction")))
+#   }
+#   
+#   # find each object, and buffer to 100m
+#   buff.dist <- 100
+#   station.pt <- filterStation(points) %>% st_buffer(buff.dist)
+#   station.poly <- filterStation(polygons) %>% st_buffer(buff.dist)
+#   station.line <- filterStation(lines) %>% st_buffer(buff.dist)
+#   
+#   # dissolve, then separate to individual polygons
+#   stations <- bind_rows(station.pt, station.poly, station.line) %>%
+#     st_union() %>%
+#     st_as_sf() %>%
+#     st_cast("POLYGON") %>%
+#     st_centroid() %>%
+#     # label geometry column
+#     rename(geometry = x)
+#   
+# }
 

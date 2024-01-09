@@ -7,19 +7,23 @@
 # in 'getDestinationTypes.R'
 
 addDestinations <- function(nodes_current, 
-                             edges_current, 
-                             osmPbfExtract,
-                             outputCrs) {
+                            edges_current, 
+                            osmPbfExtract,
+                            city, 
+                            gtfs_feed,
+                            outputCrs) {
   
   # nodes_current = networkDensified[[1]]
   # edges_current = networkDensified[[2]]
   # osmPbfExtract = "./data/melbourne_australia.osm.pbf"
+  # city = "Melbourne"
+  # gtfs_feed = "./data/gtfs.zip"
   # outputCrs = 28355
   
   # # check layers
   # st_layers(osmPbfExtract)
   # # only multipolygons, points and lines are required (not multilinestrings
-  # # or other_relations)
+  # # or other_relations) [and lines not required when using GTFS for PT stops]
   
   # # check keys
   # options(max.print = 2000)
@@ -55,8 +59,8 @@ addDestinations <- function(nodes_current,
     st_transform(outputCrs)
   points <- oe_read(osmPbfExtract, layer = "points", extra_tags = extra.tags) %>% 
     st_transform(outputCrs)
-  lines <- oe_read(osmPbfExtract, layer = "lines", extra_tags = extra.tags) %>% 
-    st_transform(outputCrs)
+  # lines <- oe_read(osmPbfExtract, layer = "lines", extra_tags = extra.tags) %>% 
+  #   st_transform(outputCrs)
 
 
   # function to extract specific destination types from point or polygon layers ----
@@ -99,14 +103,20 @@ addDestinations <- function(nodes_current,
   # and store area and location details
   destination.pt <- 
     bind_rows(destination.layer(points),
-              # add stations (from point, polygons and lines) to point table
-              getStation(points, polygons, lines) %>% 
-                mutate(dest_type = "railway_station")) %>%
+              
+              # # add stations (from point, polygons and lines) to point table
+              # getStation(points, polygons, lines) %>% 
+              # mutate(dest_type = "railway_station")) %>%
+              
+              # add PT stops (from GTFS feed) to point table
+              getPTStops(city, gtfs_feed, outputCrs, edges_current) %>%
+                mutate(dest_type = "pt_stop")) %>%
+    
     mutate(dest_id = row_number(),
            area_m2 = 0,
            centroid_x = st_coordinates(.)[, 1],
            centroid_y = st_coordinates(.)[, 2])
-  
+              
   destination.poly <- 
     destination.layer(polygons) %>%
     mutate(dest_id = max(destination.pt$dest_id) + row_number(),
