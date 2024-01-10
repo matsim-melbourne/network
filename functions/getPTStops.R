@@ -2,7 +2,7 @@
 
 # requires tidytransit (loaded in NetworkGenerator.R)
 
-getPTStops <- function(city, gtfs_feed, outputCrs, nodes_current) {
+getPTStops <- function(city, gtfs_feed, outputCrs, edges_current) {
   # city = "Melbourne"
   # gtfs_feed = "./data/gtfs.zip"
   # outputCrs = 28355
