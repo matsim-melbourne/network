@@ -81,6 +81,7 @@ processOsmTags <- function(osm_df,this_defaults_df){
       if(any(cycleway_tags=="track")& df$highway[1]!="cycleway") df$cycleway[1]=3
       if(any(foot_tags=="no")& df$highway[1]=="cycleway") df$cycleway[1]=5
       if(any(car_tags=="no")) df$is_car[1]=0
+      if(df$is_car[1]==0 & any(bicycle_tags %in% c("yes", "designated")) & df$cycleway[1]<5) df$cycleway[1]=4
       if(any(foot_tags=="no")) df$is_walk[1]=0
       if(any(foot_tags %in% c("yes","designated"))) df$is_walk[1]=1
       if(df$cycleway[1]>0 | any(bicycle_tags %in% c("yes","designated"))) df$is_cycle[1]=1

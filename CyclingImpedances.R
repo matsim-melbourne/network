@@ -31,6 +31,8 @@ addImpedances <- function() {
   library(dplyr)
   library(sf)
   library(fs)
+  library(osmextract)
+  library(stringr)
   
   dir_walk(path="./functions/",source, recurse=T, type = "file")
   
@@ -48,7 +50,7 @@ addImpedances <- function() {
                                traffic.links, 
                                traffic.multiplier)
   ## TO DO - maybe traffic can just be joined on link_id?  See whether traffic
-  ## file neatly uses the link_id's from the one-way input
+  ## file neatly uses the link_id's from the one-way input (also in cycling-adoption)
   
   echo("Adding LTS and its impedance\n")
   networkLTS <- addLTS(networkTraffic[[1]], networkTraffic[[2]])
@@ -59,12 +61,17 @@ addImpedances <- function() {
   networkSlope <- addSlopeImped(networkLTS[[1]], networkLTS[[2]])
   
   
+  # Add surface impedance --------------------------------------------------------
+  echo("Adding surface impedance")
+  networkSurf <- addSurfImped(networkSlope[[1]], networkSlope[[2]])
+  
+  
   # Calculate total weight -----------------------------------------------------
   echo("Calculating cycling weight")
   networkWeighted <- 
-    list(networkSlope[[1]],
-         networkSlope[[2]] %>%
-           mutate(cycle.weight = length + LTS_imped + slope_imped))
+    list(networkSurf[[1]],
+         networkSurf[[2]] %>%
+           mutate(cycle.weight = length + LTS_imped + slope_imped + surf_imped))
   
   
   # write output ---------------------------------------------------------------

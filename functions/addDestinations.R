@@ -7,19 +7,23 @@
 # in 'getDestinationTypes.R'
 
 addDestinations <- function(nodes_current, 
-                             edges_current, 
-                             osmPbfExtract,
-                             outputCrs) {
-  
+                            edges_current, 
+                            osmPbfExtract,
+                            city, 
+                            gtfs_feed,
+                            outputCrs) {
+
   # nodes_current = networkDensified[[1]]
   # edges_current = networkDensified[[2]]
   # osmPbfExtract = "./data/melbourne_australia.osm.pbf"
+  # city = "Melbourne"
+  # gtfs_feed = "./data/gtfs.zip"
   # outputCrs = 28355
   
   # # check layers
   # st_layers(osmPbfExtract)
   # # only multipolygons, points and lines are required (not multilinestrings
-  # # or other_relations)
+  # # or other_relations) [and lines not required when using GTFS for PT stops]
   
   # # check keys
   # options(max.print = 2000)
@@ -40,9 +44,9 @@ addDestinations <- function(nodes_current,
   #   some don't exist for some layer types
   extra.tags <- c("access", "amenity", "building", "grades", "healthcare", 
                   "healthcare:speciality", "isced:level", "landuse", "leisure", 
-                  "network", "operator", "operator:type", "public_transport", 
-                  "railway", "school", "shop", "social_facility",  "sport",
-                  "tourism", "train")
+                  "network", "operator", "operator:type", "parking", 
+                  "public_transport", "railway", "school", "shop", 
+                  "social_facility",  "sport", "tourism", "train")
   # oe_vectortranslate(osmPbfExtract, layer = "multipolygons", extra_tags = extra.tags)
   # oe_vectortranslate(osmPbfExtract, layer = "points", extra_tags = extra.tags)
   # oe_vectortranslate(osmPbfExtract, layer = "lines", extra_tags = extra.tags)
@@ -55,8 +59,8 @@ addDestinations <- function(nodes_current,
     st_transform(outputCrs)
   points <- oe_read(osmPbfExtract, layer = "points", extra_tags = extra.tags) %>% 
     st_transform(outputCrs)
-  lines <- oe_read(osmPbfExtract, layer = "lines", extra_tags = extra.tags) %>% 
-    st_transform(outputCrs)
+  # lines <- oe_read(osmPbfExtract, layer = "lines", extra_tags = extra.tags) %>% 
+  #   st_transform(outputCrs)
 
 
   # function to extract specific destination types from point or polygon layers ----
@@ -85,7 +89,8 @@ addDestinations <- function(nodes_current,
         getPost(layer) %>% mutate(dest_type = "post_office"),
         getBank(layer) %>% mutate(dest_type = "bank"),
         getRestaurant(layer) %>% mutate(dest_type = "restaurant"),
-        getCafe(layer) %>% mutate(dest_type = "cafe")
+        getCafe(layer) %>% mutate(dest_type = "cafe"),
+        getParking(layer) %>% mutate(dest_type = "parking")
       ))
   }
   
@@ -93,18 +98,34 @@ addDestinations <- function(nodes_current,
   # ----------------------------------#
   echo("Finding destinations and their nearby nodes\n")
   
-  # create tables for points and polygons, and allocate unique id's (so features 
-  # multiple multiple nodes can be grouped by the id where required)
+  # create tables for points and polygons, allocate unique id's (so features 
+  # multiple multiple nodes can be grouped by the id where required),
+  # and store area and location details
   destination.pt <- 
     bind_rows(destination.layer(points),
-              # add stations (from point, polygons and lines) to point table
-              getStation(points, polygons, lines) %>% 
-                mutate(dest_type = "railway_station")) %>%
-    mutate(dest_id = row_number())
-  
+
+              # # add stations (from point, polygons and lines) to point table
+              # getStation(points, polygons, lines) %>% 
+              # mutate(dest_type = "railway_station")) %>%
+              
+              # add PT stops (from GTFS feed) to point table
+              getPTStops(city, gtfs_feed, outputCrs, edges_current) %>%
+                mutate(dest_type = "pt_stop")) %>%
+    
+    mutate(dest_id = row_number(),
+           area_m2 = 0,
+           centroid_x = st_coordinates(.)[, 1],
+           centroid_y = st_coordinates(.)[, 2])
+              
   destination.poly <- 
     destination.layer(polygons) %>%
-    mutate(dest_id = max(destination.pt$dest_id) + row_number())
+    mutate(dest_id = max(destination.pt$dest_id) + row_number(),
+           area_m2 = as.numeric(st_area(.)),
+           centroid_x = st_coordinates(st_centroid(.))[, 1],
+           centroid_y = st_coordinates(st_centroid(.))[, 2])
+  
+  # Remove any invalid polygons as they may cause errors
+  destination.poly <- destination.poly[which(st_is_valid(destination.poly$geometry)), ]
   
   # Remove any invalid polygons as they may cause errors
   destination.poly <- destination.poly[which(st_is_valid(destination.poly$geometry)), ]

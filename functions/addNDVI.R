@@ -3,7 +3,7 @@
 
 addNDVI2Links <- function(links, ndviFile, ndviBuffDist) {
   
-  # links = networkRestructured[[2]]
+  # links = networkDensified[[2]]
   # ndviFile = "./data/NDVI_1600mBuffer_Melbourne_reprojected.tif"
   # ndviBuffDist = 30
   
@@ -28,11 +28,21 @@ addNDVI2Links <- function(links, ndviFile, ndviBuffDist) {
     group_by(ID) %>%
     summarise(ndvi = mean(NDVI, na.rm = TRUE))
   
+  # find the mean AND OTHER VALUES of the values for each link
+  ndvi_values_mean <- ndvi_values %>%
+    group_by(ID) %>%
+    summarise(ndvi = mean(NDVI, na.rm = TRUE),
+              ndvi_md = median(NDVI, na.rm = TRUE),
+              ndvi_75 = quantile(NDVI, na.rm = TRUE, probs = 0.75),
+              ndvi_90 = quantile(NDVI, na.rm = TRUE, probs = 0.9))
+  
   # join to the links, using the row number and ID
   links.with.ndvi <- links %>%
     mutate(row_no = row_number()) %>%
     left_join(., ndvi_values_mean, by = c("row_no" = "ID")) %>%
     dplyr::select(-row_no)
+
+  # st_write(links.with.ndvi, "./SP_working/links_with_NDVI.sqlite", delete_layer = TRUE)
 
   return(links.with.ndvi)
   

@@ -6,7 +6,8 @@ makeNetwork<-function(outputFileName="test"){
   # Set city
   city = "Melbourne"
   # city = "Brisbane"
-  
+  # city = "Munich"
+
   # City parameters to be set
   # •	outputCrs: desired coordinate system for network
   # •	osmExtract: if 'processOsm=T', OSM extract file in .osm format (.osm.pbf 
@@ -21,9 +22,9 @@ makeNetwork<-function(outputFileName="test"){
   #   in .osm.pbf format
   # •	ndviFile: if 'addNDVI=T', raster file with NDVI values (must be in same
   #   coordinate system as network)
-  # •	gtfs_feed: if 'addGtfs=T', zip file containing GTFS data (must also set
-  #   start and end dates in GTFS section)
-  
+  # •	gtfs_feed: if 'addGtfs=T' or 'addDestinationLayer=T, zip file containing 
+  #   GTFS data (and, if 'addGtfs=T', also set start and end dates in GTFS section)
+
   if (city == "Melbourne") {
     outputCrs = 28355
     osmExtract = "./data/melbourne.osm"
@@ -32,8 +33,8 @@ makeNetwork<-function(outputFileName="test"){
     demFile = "./data/DEM_melbourne.tif"
     osmPbfExtract = "./data/melbourne_australia.osm.pbf"
     ndviFile = "./data/NDVI_1600mBuffer_Melbourne_reprojected.tif"
-    gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip"
-    
+    gtfs_feed = "./data/gtfs.zip"
+
   } else if (city == "Brisbane") {
     outputCrs = 28356
     osmExtract = ""  # must set 'processOsm=F'
@@ -42,8 +43,17 @@ makeNetwork<-function(outputFileName="test"){
     demFile = "./data/5m_DEM_reprojected.tif" # MIGHT NOT BE FINAL FILE
     osmPbfExtract = "./data/brisbane_australia.osm.pbf"
     ndviFile = ""  # must set 'addNDVI=F'
-    gtfs_feed = ""  # must set 'addGtfs=F'
+    gtfs_feed = "./data/SEQ_GTFS.zip"
 
+  } else if (city == "Munich") {
+    outputCrs = 25832
+    osmExtract = ""  # must set 'processOsm=F'
+    networkSqlite = "./data/munich_network_unconfigured.sqlite"
+    cropAreaPoly = ""  # must set 'crop2TestArea=F'
+    demFile = "" # must set 'addElevation=F'
+    osmPbfExtract = "./data/munich_germany.osm.pbf"
+    ndviFile = ""  # must set 'addNDVI=F'
+    gtfs_feed = "./data/mvv_gtfs.zip" # to test; if not then >> # must set 'addGtfs=F' and 'addDestinationLayer=F'
   }
 
   # INPUT NETWORK 
@@ -278,6 +288,8 @@ makeNetwork<-function(outputFileName="test"){
     destinations <- addDestinations(networkDensified[[1]],
                                     networkDensified[[2]],
                                     osmPbfExtract,
+                                    city,
+                                    gtfs_feed,
                                     outputCrs)
   }
 
