@@ -125,7 +125,6 @@ getCafe <- function(layer) {
   return(layer %>% filter(amenity == "cafe"))
 }
 
-
 # 8 parking ----
 getParking <- function(layer) {
   return(layer %>% filter(amenity == "parking" &

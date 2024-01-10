@@ -12,7 +12,7 @@ addDestinations <- function(nodes_current,
                             city, 
                             gtfs_feed,
                             outputCrs) {
-  
+
   # nodes_current = networkDensified[[1]]
   # edges_current = networkDensified[[2]]
   # osmPbfExtract = "./data/melbourne_australia.osm.pbf"
@@ -103,7 +103,7 @@ addDestinations <- function(nodes_current,
   # and store area and location details
   destination.pt <- 
     bind_rows(destination.layer(points),
-              
+
               # # add stations (from point, polygons and lines) to point table
               # getStation(points, polygons, lines) %>% 
               # mutate(dest_type = "railway_station")) %>%
@@ -123,6 +123,9 @@ addDestinations <- function(nodes_current,
            area_m2 = as.numeric(st_area(.)),
            centroid_x = st_coordinates(st_centroid(.))[, 1],
            centroid_y = st_coordinates(st_centroid(.))[, 2])
+  
+  # Remove any invalid polygons as they may cause errors
+  destination.poly <- destination.poly[which(st_is_valid(destination.poly$geometry)), ]
   
   # Remove any invalid polygons as they may cause errors
   destination.poly <- destination.poly[which(st_is_valid(destination.poly$geometry)), ]

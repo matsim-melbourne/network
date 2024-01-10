@@ -7,7 +7,7 @@ makeNetwork<-function(outputFileName="test"){
   city = "Melbourne"
   # city = "Brisbane"
   # city = "Munich"
-  
+
   # City parameters to be set
   # •	outputCrs: desired coordinate system for network
   # •	osmExtract: if 'processOsm=T', OSM extract file in .osm format (.osm.pbf 
@@ -24,7 +24,7 @@ makeNetwork<-function(outputFileName="test"){
   #   coordinate system as network)
   # •	gtfs_feed: if 'addGtfs=T' or 'addDestinationLayer=T, zip file containing 
   #   GTFS data (and, if 'addGtfs=T', also set start and end dates in GTFS section)
-  
+
   if (city == "Melbourne") {
     outputCrs = 28355
     osmExtract = "./data/melbourne.osm"
@@ -34,7 +34,7 @@ makeNetwork<-function(outputFileName="test"){
     osmPbfExtract = "./data/melbourne_australia.osm.pbf"
     ndviFile = "./data/NDVI_1600mBuffer_Melbourne_reprojected.tif"
     gtfs_feed = "./data/gtfs.zip"
-    
+
   } else if (city == "Brisbane") {
     outputCrs = 28356
     osmExtract = ""  # must set 'processOsm=F'
@@ -54,7 +54,6 @@ makeNetwork<-function(outputFileName="test"){
     osmPbfExtract = "./data/munich_germany.osm.pbf"
     ndviFile = ""  # must set 'addNDVI=F'
     gtfs_feed = "./data/mvv_gtfs.zip" # to test; if not then >> # must set 'addGtfs=F' and 'addDestinationLayer=F'
-    
   }
 
   # INPUT NETWORK 
