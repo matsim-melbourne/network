@@ -6,6 +6,9 @@
 # uses functions for various destination types with tag combinations set out
 # in 'getDestinationTypes.R'
 
+# NOTE - WILL REQUIRE REFACTORING IF THE .GPKG, RATHER THAN THE .OSM.PBF, IS
+# SAVED AS THE BASE FILE - NEED TO EXTRACT THE OTHER TAGS FROM THE .GPKG
+
 addDestinations <- function(nodes_current, 
                             edges_current, 
                             osmPbfExtract,

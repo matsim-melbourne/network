@@ -4,9 +4,8 @@ makeNetwork<-function(outputFileName="test"){
   
   # CITY AND ITS PARAMETERS
   # Set city
+  # city = "Bendigo"
   city = "Melbourne"
-  # city = "Brisbane"
-  # city = "Munich"
 
   # City parameters to be set
   # •	outputCrs: desired coordinate system for network
@@ -25,37 +24,37 @@ makeNetwork<-function(outputFileName="test"){
   # •	gtfs_feed: if 'addGtfs=T' or 'addDestinationLayer=T, zip file containing 
   #   GTFS data (and, if 'addGtfs=T', also set start and end dates in GTFS section)
 
-  if (city == "Melbourne") {
-    outputCrs = 28355
-    osmExtract = "./data/melbourne.osm"
-    networkSqlite = "./data/melbourne_network_unconfigured.sqlite"
-    cropAreaPoly = "city-of-melbourne_victoria"
-    demFile = "./data/DEM_melbourne.tif"
-    osmPbfExtract = "./data/melbourne_australia.osm.pbf"
-    ndviFile = "./data/NDVI_1600mBuffer_Melbourne_reprojected.tif"
-    gtfs_feed = "./data/gtfs.zip"
+  if (city == "Bendigo") {
+    region = "../data/processed/greater_bendigo.sqlite"
+    outputCrs = 7899
+    osmGpkg = "../data/processed/bendigo_osm.gpkg"
+    # networkSqlite = "./data/brisbane_network_unconfigured.sqlite"
+    # cropAreaPoly = ""  # must set 'crop2TestArea=F'
+    # demFile = "./data/5m_DEM_reprojected.tif" # MIGHT NOT BE FINAL FILE
+    # osmPbfExtract = "./data/brisbane_australia.osm.pbf"
+    # ndviFile = ""  # must set 'addNDVI=F'
+    # gtfs_feed = "./data/SEQ_GTFS.zip"
+    
+  } else if (city == "Melbourne") {
+    region = "../data/processed/greater_melbourne.sqlite"
+    outputCrs = 7899
+    osmGpkg = "../data/processed/melbourne_osm.gpkg"
+    # networkSqlite = "./data/melbourne_network_unconfigured.sqlite"
+    # cropAreaPoly = "city-of-melbourne_victoria"
+    # demFile = "./data/DEM_melbourne.tif"
+    # osmPbfExtract = "./data/melbourne_australia.osm.pbf"
+    # ndviFile = "./data/NDVI_1600mBuffer_Melbourne_reprojected.tif"
+    # gtfs_feed = "./data/gtfs.zip"
 
-  } else if (city == "Brisbane") {
-    outputCrs = 28356
-    osmExtract = ""  # must set 'processOsm=F'
-    networkSqlite = "./data/brisbane_network_unconfigured.sqlite"
-    cropAreaPoly = ""  # must set 'crop2TestArea=F'
-    demFile = "./data/5m_DEM_reprojected.tif" # MIGHT NOT BE FINAL FILE
-    osmPbfExtract = "./data/brisbane_australia.osm.pbf"
-    ndviFile = ""  # must set 'addNDVI=F'
-    gtfs_feed = "./data/SEQ_GTFS.zip"
-
-  } else if (city == "Munich") {
-    outputCrs = 25832
-    osmExtract = ""  # must set 'processOsm=F'
-    networkSqlite = "./data/munich_network_unconfigured.sqlite"
-    cropAreaPoly = ""  # must set 'crop2TestArea=F'
-    demFile = "" # must set 'addElevation=F'
-    osmPbfExtract = "./data/munich_germany.osm.pbf"
-    ndviFile = ""  # must set 'addNDVI=F'
-    gtfs_feed = "./data/mvv_gtfs.zip" # to test; if not then >> # must set 'addGtfs=F' and 'addDestinationLayer=F'
   }
 
+  # DOWNLOAD OSM EXTRACT
+  # A flag for whether to download osm extract for the region (if not, and if
+  # network needs to be processed, then must have region gpkg
+  downloadOsm=T
+  # Distance to buffer region when getting osm extract
+  regionBufferDist=10000
+ 
   # INPUT NETWORK 
   # A flag for whether process raw osm extract or not (if not, must have network sqlite)
   processOsm=F
@@ -138,6 +137,7 @@ makeNetwork<-function(outputFileName="test"){
   echo("========================================================\n")
   echo("                **Network Generation Setting**          \n")
   echo("--------------------------------------------------------\n")
+  echo(paste0("- Downloading OSM extract:                        ", downloadOsm,"\n"))
   echo(paste0("- Starting from OSM extract:                      ", processOsm,"\n"))
   echo(paste0("- Cropping to a test area:                        ", crop2Area,"\n"))
   echo(paste0("- Shortest link length in network simplification: ", shortLinkLength,"\n"))
@@ -151,6 +151,12 @@ makeNetwork<-function(outputFileName="test"){
   echo("========================================================\n")
   echo("                **Launching Network Generation**        \n")
   echo("--------------------------------------------------------\n")
+  
+  # Downloading OSM
+  if (downloadOsm) {
+    echo(paste0("Downloading OSM extract for ", city, "\n"))
+    getOsmExtract(region, outputCrs, regionBufferDist, osmGpkg)
+  }
   
   # Processing OSM
   if(processOsm){
