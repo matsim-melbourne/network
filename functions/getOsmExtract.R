@@ -19,9 +19,9 @@ getOsmExtract <- function(region,
   options(timeout = 1200)
   
   # download the full extract (whole of Australia; quite slow)
-  echo("Downloading OSM extract\n")
-  full.extract <- oe_download(oe_match(region, crs = outputCrs)$url,
-                              download_directory = ".")
+  download.url <- oe_match(region, crs = outputCrs)$url
+  echo(paste("Downloading OSM extract from", download.url, "\n"))
+  full.extract <- oe_download(download.url, download_directory = ".")
   
   # convert to gpkg, including all layers
   echo(paste("Converting downloaded OSM extract to .gpkg for selected region\n"))
@@ -42,7 +42,9 @@ getOsmExtract <- function(region,
   }
   
   # delete full extract and temporary location of region extract, restore timeout to default
-  unlink(full.extract)
+  if (!retainDownload) {
+    unlink(full.extract)
+  }
   unlink(region.gpkg)
   options(timeout = default.timeout)
 

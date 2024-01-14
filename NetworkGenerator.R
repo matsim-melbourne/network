@@ -4,8 +4,8 @@ makeNetwork<-function(outputFileName="test"){
   
   # CITY AND ITS PARAMETERS
   # Set city
-  # city = "Bendigo"
-  city = "Melbourne"
+  city = "Bendigo"
+  # city = "Melbourne"
 
   # City parameters to be set
   # •	outputCrs: desired coordinate system for network
@@ -50,14 +50,16 @@ makeNetwork<-function(outputFileName="test"){
 
   # DOWNLOAD OSM EXTRACT
   # A flag for whether to download osm extract for the region (if not, and if
-  # network needs to be processed, then must have region gpkg
-  downloadOsm=T
-  # Distance to buffer region when getting osm extract
-  regionBufferDist=10000
+  # network needs to be processed, then must already have osmGpkg file)
+  downloadOsm=F
+  regionBufferDist=10000  # Distance to buffer region when getting osm extract
+  retainDownload=F  # Whether to retain downloaded file after region extracted
+  
  
-  # INPUT NETWORK 
-  # A flag for whether process raw osm extract or not (if not, must have network sqlite)
-  processOsm=F
+  # NETWORK FROM OSM 
+  # A flag for whether to build unconfigured network from osm extract (if not,
+  # must already have network sqlite)
+  networkFromOsm=T
 
   # SIMPLIFICATION
   shortLinkLength=20
@@ -104,30 +106,35 @@ makeNetwork<-function(outputFileName="test"){
 
   # Packages ----------------------------------------------------------------
 
- library(sf)
- library(fs)
- library(dplyr)
- library(data.table)
- library(stringr)
- library(igraph)
- library(raster)
- library(terra)
- library(rgdal)
- library(purrr)
- library(lwgeom)
- library(tidytransit)
- library(hablar)
- library(hms)
- library(osmextract)
- library(tidyr)
+  library(sf)
+  library(fs)
+  library(dplyr)
+  library(data.table)
+  library(stringr)
+  library(igraph)
+  library(raster)
+  library(terra)
+  library(rgdal)
+  library(purrr)
+  library(lwgeom)
+  library(tidytransit)
+  library(hablar)
+  library(hms)
+  library(osmextract)
+  library(tidyr)
+  library(doSNOW)
+  library(parallel)
+  library(foreach)
+  library(nngeo)
+  
 
   # Building the output folder structure ------------------------------------
-
-  outputDir <- paste0("output/",outputFileName)
-  if(dir.exists(outputDir)) dir_delete(outputDir)
-  dir_create(paste0('./',outputDir))
-  sink(paste0('./',outputDir,'/makeMatsimNetwork.log'), append=FALSE, split=TRUE)
-  if (addGtfs) dir_create(paste0(outputDir,"/gtfs"))
+  ## COMMENTING THIS OUT FOR NOW BECAUSE IT'S ANNOYING; ADD BACK LATER
+  # outputDir <- paste0("output/",outputFileName)
+  # if(dir.exists(outputDir)) dir_delete(outputDir)
+  # dir_create(paste0('./',outputDir))
+  # sink(paste0('./',outputDir,'/makeMatsimNetwork.log'), append=FALSE, split=TRUE)
+  # if (addGtfs) dir_create(paste0(outputDir,"/gtfs"))
 
   #  Functions --------------------------------------------------------------
 
@@ -138,7 +145,7 @@ makeNetwork<-function(outputFileName="test"){
   echo("                **Network Generation Setting**          \n")
   echo("--------------------------------------------------------\n")
   echo(paste0("- Downloading OSM extract:                        ", downloadOsm,"\n"))
-  echo(paste0("- Starting from OSM extract:                      ", processOsm,"\n"))
+  echo(paste0("- Processing the OSM extract:                     ", networkFromOsm,"\n"))
   echo(paste0("- Cropping to a test area:                        ", crop2Area,"\n"))
   echo(paste0("- Shortest link length in network simplification: ", shortLinkLength,"\n"))
   echo(paste0("- Adding elevation:                               ", addElevation,"\n"))
@@ -159,18 +166,21 @@ makeNetwork<-function(outputFileName="test"){
   }
   
   # Processing OSM
-  if(processOsm){
-    echo(paste0("Starting to process osm extract file, ", osmExtract,"\n"))
-    echo(paste0("This might take a while depending on your OSM extract size, ", osmExtract,"\n"))
-    echo(paste0("Output coordinate system: ", outputCrs, "\n"))
-    echo(paste0("Note that this step requires Postgres and GDAL/OGR to be installed, see readme for more info.\n"))
-    networkSqlite="./data/network.sqlite"
-    if(file_exists(osmExtract)){
-    system(paste("./processOSM.sh ", osmExtract, outputCrs, networkSqlite))
-    }else{
-      warning("OSM extract not found, skipping this step")
-    } 
+  if(networkFromOsm) {
+    echo(paste0("Starting to process osm extract file, ", osmGpkg, "\n"))
+    # networkSqlite="./data/network.sqlite"
+    # if(file_exists(osmExtract)){
+    # system(paste("./processOSM.sh ", osmExtract, outputCrs, networkSqlite))
+    # }else{
+    #   warning("OSM extract not found, skipping this step")
+    # }
+    # FINALISE THIS CODE BLOCK DEPENDING ON FINAL STRUCTURE OF processOsm.R
+    # AND ARRANGMEENTS FOR SAVING
+    networkSqlite <- processOsm(osmGpkg, outputCrs)
+    
   }
+  
+  return(networkSqlite)  ## JUST FOR TESTING - DELETE!
   
   # Note: writing logical fields to sqlite is a bad idea, so switching to integers
   networkInput <- list(st_read(networkSqlite,layer="nodes",quiet=T),
@@ -371,3 +381,5 @@ makeNetwork<-function(outputFileName="test"){
   if(writeXml) system.time(exportXML(networkFinal, outputDir)) 
 }
 
+## JUST FOR TESTING
+# output <- makeNetwork()
