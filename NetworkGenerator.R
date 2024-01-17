@@ -1,17 +1,21 @@
-makeNetwork<-function(outputFileName="test"){
-  # outputFileName="network"
+makeNetwork<-function(city, outputFileName = "test"){
+  # city = "Bendigo"
+  # city = "Melbourne"
+  
+  # outputFileName = "network"
+  
   # Parameters --------------------------------------------------------------
   
-  # CITY AND ITS PARAMETERS
-  # Set city
-  city = "Bendigo"
-  # city = "Melbourne"
-
+  # CITY PARAMETERS
   # City parameters to be set
+  # •	region: if 'downloadOsm=T', file delineating the boundary of the area for 
+  #   which Osm extract is to be downloaded (assumed to be in sqlite format 
+  #   with a single layer)
   # •	outputCrs: desired coordinate system for network
-  # •	osmExtract: if 'processOsm=T', OSM extract file in .osm format (.osm.pbf 
-  #   not supported for this step)
-  # •	networkSqlite: if 'processOsm=F', network sqlite file
+  # •	osmGpkg: location where downloaded OSM extract for region is to be stored
+  #   (if 'downloadOsm=T') and/or read from (if 'processOsm=T')
+  # •	unconfiguredSqlite: location where processed OSM file is to be stored
+  #   (if 'processOsm=T') or read from (if 'processOsm=F')
   # •	cropAreaPoly: if 'crop2TestArea=T' cropArea location from 
   #   https://github.com/JamesChevalier/cities/tree/master/australia/victoria 
   #   (only supported for Victoria at this stage)
@@ -28,8 +32,8 @@ makeNetwork<-function(outputFileName="test"){
     region = "../data/processed/greater_bendigo.sqlite"
     outputCrs = 7899
     osmGpkg = "../data/processed/bendigo_osm.gpkg"
-    # networkSqlite = "./data/brisbane_network_unconfigured.sqlite"
-    # cropAreaPoly = ""  # must set 'crop2TestArea=F'
+    unconfiguredSqlite = "../data/processed/bendigo_network_unconfigured.sqlite"
+    # cropAreaPoly = ""  # must set 'crop2Area=F'
     # demFile = "./data/5m_DEM_reprojected.tif" # MIGHT NOT BE FINAL FILE
     # osmPbfExtract = "./data/brisbane_australia.osm.pbf"
     # ndviFile = ""  # must set 'addNDVI=F'
@@ -39,13 +43,16 @@ makeNetwork<-function(outputFileName="test"){
     region = "../data/processed/greater_melbourne.sqlite"
     outputCrs = 7899
     osmGpkg = "../data/processed/melbourne_osm.gpkg"
-    # networkSqlite = "./data/melbourne_network_unconfigured.sqlite"
+    unconfiguredSqlite = "../data/processed/melbourne_network_unconfigured.sqlite"
     # cropAreaPoly = "city-of-melbourne_victoria"
     # demFile = "./data/DEM_melbourne.tif"
     # osmPbfExtract = "./data/melbourne_australia.osm.pbf"
     # ndviFile = "./data/NDVI_1600mBuffer_Melbourne_reprojected.tif"
     # gtfs_feed = "./data/gtfs.zip"
 
+  } else {
+    echo(paste("City parameters for", city, "have not been set; unable to proceed\n"))
+    return()
   }
 
   # DOWNLOAD OSM EXTRACT
@@ -55,11 +62,11 @@ makeNetwork<-function(outputFileName="test"){
   regionBufferDist=10000  # Distance to buffer region when getting osm extract
   retainDownload=F  # Whether to retain downloaded file after region extracted
   
- 
   # NETWORK FROM OSM 
   # A flag for whether to build unconfigured network from osm extract (if not,
-  # must already have network sqlite)
+  # must already have unconfigured sqlite)
   networkFromOsm=T
+  saveUnconfigured=T
 
   # SIMPLIFICATION
   shortLinkLength=20
@@ -109,6 +116,7 @@ makeNetwork<-function(outputFileName="test"){
   library(sf)
   library(fs)
   library(dplyr)
+  library(tidyr)
   library(data.table)
   library(stringr)
   library(igraph)
@@ -129,12 +137,11 @@ makeNetwork<-function(outputFileName="test"){
   
 
   # Building the output folder structure ------------------------------------
-  ## COMMENTING THIS OUT FOR NOW BECAUSE IT'S ANNOYING; ADD BACK LATER
-  # outputDir <- paste0("output/",outputFileName)
-  # if(dir.exists(outputDir)) dir_delete(outputDir)
-  # dir_create(paste0('./',outputDir))
-  # sink(paste0('./',outputDir,'/makeMatsimNetwork.log'), append=FALSE, split=TRUE)
-  # if (addGtfs) dir_create(paste0(outputDir,"/gtfs"))
+  outputDir <- paste0("output/",outputFileName)
+  if(dir.exists(outputDir)) dir_delete(outputDir)
+  dir_create(paste0('./',outputDir))
+  sink(paste0('./',outputDir,'/makeMatsimNetwork.log'), append=FALSE, split=TRUE)
+  if (addGtfs) dir_create(paste0(outputDir,"/gtfs"))
 
   #  Functions --------------------------------------------------------------
 
@@ -165,47 +172,39 @@ makeNetwork<-function(outputFileName="test"){
     getOsmExtract(region, outputCrs, regionBufferDist, osmGpkg)
   }
   
-  # Processing OSM
+  # Processing OSM, or loading existing layers if not required
   if(networkFromOsm) {
     echo(paste0("Starting to process osm extract file, ", osmGpkg, "\n"))
-    # networkSqlite="./data/network.sqlite"
-    # if(file_exists(osmExtract)){
-    # system(paste("./processOSM.sh ", osmExtract, outputCrs, networkSqlite))
-    # }else{
-    #   warning("OSM extract not found, skipping this step")
-    # }
-    # FINALISE THIS CODE BLOCK DEPENDING ON FINAL STRUCTURE OF processOsm.R
-    # AND ARRANGMEENTS FOR SAVING
-    networkSqlite <- processOsm(osmGpkg, outputCrs)
+    networkUnconfigured <- processOsm(osmGpkg, outputCrs)
     
+    if (saveUnconfigured) {
+      st_write(networkUnconfigured[[1]], unconfiguredSqlite, layer = "nodes", delete_layer = T)
+      st_write(networkUnconfigured[[2]], unconfiguredSqlite, layer = "edges", delete_layer = T)
+      st_write(networkUnconfigured[[3]], unconfiguredSqlite, layer = "osm_metadata", delete_layer = T)
+    }
+    
+  } else {
+    
+    if (file_exists(unconfiguredSqlite)) {
+      echo(paste("Reading in existing unconfigured network,", unconfiguredSqlite, "\n"))
+      networkUnconfigured <- 
+        list(st_read(unconfiguredSqlite, layer = "nodes") %>% st_set_geometry("geom"),
+             st_read(unconfiguredSqlite, layer = "edges") %>% st_set_geometry("geom"))
+      
+    } else {
+      echo(paste("Unconfigured network file", unconfiguredSqlite, "not found; unable to proceed\n"))
+      return()
+    }
   }
   
-  return(networkSqlite)  ## JUST FOR TESTING - DELETE!
-  
-  # Note: writing logical fields to sqlite is a bad idea, so switching to integers
-  networkInput <- list(st_read(networkSqlite,layer="nodes",quiet=T),
-                       st_read(networkSqlite,layer="edges",quiet=T))
-  
-  # We run into trouble if the geometry column is 'geom' instead of 'GEOMETRY'
-  if('GEOMETRY'%in%colnames(networkInput[[1]])) {
-    networkInput[[1]]<-networkInput[[1]]%>%rename(geom=GEOMETRY)
-  }
-  if('GEOMETRY'%in%colnames(networkInput[[2]])) {
-    networkInput[[2]]<-networkInput[[2]]%>%rename(geom=GEOMETRY)
-  }
-  
-  cat(paste0("Network input, nodes:\n"))
-  str(networkInput[[1]])
-  # print.data.frame(head(networkInput[[1]]))
-  cat(paste0("\nNetwork input, edges:\n"))
-  str(networkInput[[2]])
-  cat(paste0("\n"))
-  
+  # TO DO FROM HERE, and fix up 'networkInput' (now 'networkUnconfigured', and probably 
+  # read in osm_metadata above, after 'networkUnconfigured <-')
+  # crop to test area if required
   if(crop2Area)system.time(networkInput <- crop2Poly(networkInput,
                                                      cropAreaPoly,
                                                      outputCrs))
   echo("processing OSM meta data\n")
-  osm_metadata <- st_read(networkSqlite,layer="osm_metadata",quiet=T) %>%
+  osm_metadata <- st_read(unconfiguredSqlite,layer="osm_metadata",quiet=T) %>%
     filter(osm_id%in%networkInput[[2]]$osm_id)
   echo("Building default OSM attribute tables\n")
   defaults_df <- buildDefaultsDF()
@@ -382,4 +381,4 @@ makeNetwork<-function(outputFileName="test"){
 }
 
 ## JUST FOR TESTING
-# output <- makeNetwork()
+output <- makeNetwork(city = "Bendigo")

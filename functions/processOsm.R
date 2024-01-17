@@ -1,24 +1,10 @@
 # function to convert OSM .gpkg file into network of nodes and edges
 
-
-library(sf)
-library(fs)
-library(dplyr)
-library(lwgeom)
-library(nngeo)
-library(stringr)
-library(doSNOW)
-library(parallel)
-library(foreach)
-library(ggplot2)
-source("./functions/etc/logging.R")
-source("./functions/splitPathsAtPoints.R")
-outputCrs = 7899
-
 processOsm <- function(osmGpkg, outputCrs) {
   
-  osmGpkg = "../data/processed/bendigo_osm.gpkg"
+  # osmGpkg = "../data/processed/bendigo_osm.gpkg"
   # osmGpkg = "../data/processed/melbourne_osm.gpkg"
+  # outputCrs = 7899
   
   # read in OSM data
   # -----------------------------------#
@@ -87,7 +73,6 @@ processOsm <- function(osmGpkg, outputCrs) {
     ungroup()
   )
   
-
   # temp dev notes (SP): 
   # (1) compared to network.sql, this only places intersections where both are 
   #     bridges, both are tunnels, or both are neither (whereas network.sql, 
@@ -105,7 +90,7 @@ processOsm <- function(osmGpkg, outputCrs) {
   split.path.list <- splitPathsAtPoints(paths, intersections, 0.001, "osm_id")
   
   # convert to dataframe, snap to grid, remove empty geometries, add unique id
-  echo("Combining the split paths into a single dataframe")
+  echo("Combining the split paths into a single dataframe\n")
   system.time(
   split.paths <- bind_rows(split.path.list) %>% 
     st_snap_to_grid(1) %>%
@@ -116,19 +101,20 @@ processOsm <- function(osmGpkg, outputCrs) {
   )
 
   # find endpoints of each split path
-  echo("Finding endpoints of the split paths")
+  echo("Finding endpoints of the split paths\n")
   endpoints <- rbind(lwgeom::st_startpoint(split.paths) %>% st_sf(),
                      lwgeom::st_endpoint(split.paths) %>% st_sf()) %>%
     # remove duplicates (produces multipoint)
     summarise() %>%
     # convert multipoint to point
     st_cast("POINT") %>%
-    # add unique id
-    mutate(endpoint_id = row_number())
+    # add unique id and set geometry column name
+    mutate(endpoint_id = row_number()) %>%
+    st_set_geometry("geom")
   
   # find split.paths that have more than 2 endpoints within 0.1m, in order
   # to re-split at ajdacent endpoints
-  echo("Finding paths that need to be re-split")
+  echo("Finding paths that need to be re-split\n")
   paths.with.nearby.endpoints <- split.paths %>%
     # joint endpoints within 0.1m
     st_join(endpoints %>% st_buffer(0.1), join = st_intersects)
@@ -150,7 +136,7 @@ processOsm <- function(osmGpkg, outputCrs) {
   # do a second round of splitting: re-split the paths that have adjacent endpoints,
   # using 0.1 distance this time, but only where adjacent endpoint is an endpoint
   # for a path that has the same bridge_tunnel status as the path to be resplit
-  echo(paste("Re-splitting", nrow(paths.to.resplit), "paths at adjacent endpoints"))
+  echo(paste("Re-splitting", nrow(paths.to.resplit), "paths at adjacent endpoints\n"))
   
   endpoints.for.resplit <- paths.with.nearby.endpoints %>%
     # just keep paths that need to be resplit, with their bridge_tunnel status
@@ -174,7 +160,7 @@ processOsm <- function(osmGpkg, outputCrs) {
     splitPathsAtPoints(paths.to.resplit, endpoints.for.resplit, 0.1, "path_id")
   
   # convert to dataframe, snap to grid, remove empty geometries
-  echo("Combining the resplit paths into a single dataframe")
+  echo("Combining the resplit paths into a single dataframe\n")
   system.time(
     resplit.paths <- bind_rows(resplit.path.list) %>% 
       st_snap_to_grid(1) %>%
@@ -185,7 +171,6 @@ processOsm <- function(osmGpkg, outputCrs) {
   combined.paths <- split.paths %>%
     filter(!path_id %in% paths.to.resplit$path_id) %>%
     rbind(resplit.paths) %>%
-    dplyr::select(osm_id) %>%
     # add a new id field, for joining to from and to id's
     mutate(combined_path_id = row_number())
 
@@ -199,7 +184,7 @@ processOsm <- function(osmGpkg, outputCrs) {
   #     or 'level' tag status
 
   
-  # finalise paths
+  # finalise paths with metadata
   # -----------------------------------#
   
   # find from and to id's from endpoints
@@ -220,26 +205,41 @@ processOsm <- function(osmGpkg, outputCrs) {
     st_drop_geometry()
   
   # assemble final paths with length, from_id and to_id
-  final.paths <- combined.paths %>%
+  final.paths.with.metadata <- combined.paths %>%
     # add length column
     mutate(length = as.integer(st_length(geom))) %>%
     
     # join from_id and to_id
     left_join(from_ids, by = "combined_path_id") %>%
-    left_join(to_ids, by = "combined_path_id") %>%
-    
-    # select final fields
-    dplyr::select(osm_id, length, from_id, to_id)
+    left_join(to_ids, by = "combined_path_id")
     
  
-  
-  
-  
-  # nodes.....
+  # nodes
   # -----------------------------------#
+
+  echo("Finding roundabout and traffic signal status of nodes\n")
   
+  # extract from_id and to_id of edges that are roundabouts
+  roundabout.edges <- final.paths.with.metadata %>%
+    st_drop_geometry() %>%
+    # left_join(osm.metadata, by = "osm_id") %>% # <<< don't now need this
+    # is_roundabout: 1 if 'roundabout' in 'other_tags'; 0 if not, or if 'other_tags' is NA
+    mutate(is_roundabout = case_when(
+      is.na(other_tags)  ~ 0,
+      str_detect(other_tags, "roundabout") ~ 1, 
+      TRUE  ~ 0)) %>%
+    dplyr::select(from_id, to_id, is_roundabout)
+    
+  # find node ids that connect to roundabouts
+  roundabout.nodes <- roundabout.edges %>%
+    filter(is_roundabout == 1) %>%
+    # combine from_id and to_id columns into new 'id' column
+    tidyr::gather(key = "key", value = "id", from_id, to_id) %>%
+    # keep distinct ids
+    dplyr::select(id) %>%
+    distinct()
   
-  # extract the traffic signals  [MOVE THIS DOWN TO THE BIT DEALING WITH INTERSECTIONS]
+  # extract the traffic signals
   traffic.signals <- osm.points %>%
     # filter to traffic signals
     filter(str_detect(highway, "traffic_signals")) %>%
@@ -247,61 +247,34 @@ processOsm <- function(osmGpkg, outputCrs) {
     st_snap_to_grid(1) %>%
     dplyr::select(osm_id, highway, other_tags)
   
+  # find endpoints within 20m of traffic signals
+  endpoints.near.signals <- endpoints %>%
+    st_filter(st_buffer(traffic.signals, 20), .predicate = st_intersects) %>%
+    .$endpoint_id
   
+  # finalise nodes: attribute with roundabout and signal status
+  final.nodes <- endpoints %>%
+    mutate(is_roundabout = ifelse(endpoint_id %in% roundabout.nodes$id, 1, 0),
+           is_signal = ifelse(endpoint_id %in% endpoints.near.signals, 1, 0))
   
-  
-  
-  
-  #------ working section
-  
-  # # read in temporary tables
-  # sql.tables <- "./SP_working/temp_melb_sql_tables.sqlite"
-  # roads <- st_read(sql.tables, layer = "roads")
-  # 
-  # write out temporary Bendigo outputs
-  bend.out <- "./SP_working/temp_bendigo.sqlite"
-  st_write(paths, bend.out, layer = "paths", delete_layer = T)
-  st_write(intersections, bend.out, layer = "intersections", delete_layer = T)
-  st_write(split.paths, bend.out, layer = "split_paths", delete_layer = T)
-  st_write(endpoints, bend.out, layer = "endpoints", delete_layer = T)
-  st_write(final.paths, bend.out, layer = "final_paths", delete_layer = T)
 
-  st_write(split.paths, bend.out, layer = "split_paths_diff_loop", delete_layer = T)
-  st_write(paths.to.resplit, bend.out, layer = "paths_to_resplit", delete_layer = T)
-
-  st_delete(bend.out, layer = "split_paths_unbuffered_point_diff")
-
-  paths <- st_read(bend.out, layer = "paths")
-  intersections <- st_read(bend.out, layer = "intersections")
-  split.paths <- st_read(bend.out, layer = "split_paths")
-  endpoints <- st_read(bend.out, layer = "endpoints")
-  final.paths <- st_read(bend.out, layer = "final_paths")
+  # separate final paths and osm metadata
+  # -----------------------------------#
   
-  # write out / read in temporary Melbourne outputs
-  melb.out <- "./SP_working/temp_melbourne.sqlite"
-  st_write(paths, melb.out, layer = "paths", delete_layer = T)
-  st_write(intersections, melb.out, layer = "intersections", delete_layer = T)
-  st_write(split.paths, melb.out, layer = "split_paths", delete_layer = T)
-  st_write(endpoints, melb.out, layer = "endpoints", delete_layer = T)
-  st_write(final.paths, melb.out, layer = "final_paths", delete_layer = T)
+  # remove metadata from final paths
+  final.paths <- final.paths.with.metadata %>%
+    dplyr::select(osm_id, length, from_id, to_id)
   
-  st_write(paths.to.resplit, melb.out, layer = "paths_to_resplit", delete_layer = T)
-  st_write(problem.paths, melb.out, layer = "problem_paths", delete_layer = T)
-  
-  st_delete(melb.out, layer = "problem_paths")
-  
-  paths <- st_read(melb.out, layer = "paths")
-  intersections <- st_read(melb.out, layer = "intersections")
-  split.paths <- st_read(melb.out, layer = "split_paths")
-  endpoints <- st_read(melb.out, layer = "endpoints")
-  final.paths <- st_read(melb.out, layer = "final_paths")
-  
-  #--------end working section
-  
-  # temporary return statement for testing
-  return(list(paths, intersections, endpoints, final.paths))
+  # extract the non-spatial data for the paths
+  osm.metadata <- paths %>%
+    st_drop_geometry() %>%
+    dplyr::select(osm_id, highway, other_tags) %>%
+    filter(osm_id %in% final.paths$osm_id)
   
   
+  # return outputs
+  # -----------------------------------#
+  return(list(final.nodes, final.paths, osm.metadata))
   
 }
 
