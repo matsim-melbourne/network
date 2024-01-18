@@ -255,7 +255,8 @@ processOsm <- function(osmGpkg, outputCrs) {
   # finalise nodes: attribute with roundabout and signal status
   final.nodes <- endpoints %>%
     mutate(is_roundabout = ifelse(endpoint_id %in% roundabout.nodes$id, 1, 0),
-           is_signal = ifelse(endpoint_id %in% endpoints.near.signals, 1, 0))
+           is_signal = ifelse(endpoint_id %in% endpoints.near.signals, 1, 0)) %>%
+    rename(id = endpoint_id)
   
 
   # separate final paths and osm metadata
