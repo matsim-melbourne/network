@@ -181,21 +181,21 @@ exportXML <- function(networkFinal, outputDir){
   if(!("id" %in% colnames(links))) links <- links %>% mutate(id=NA)
   if(!("fwd_slope_pct" %in% colnames(links))) links <- links %>% mutate(fwd_slope_pct=NA, rvs_slope_pct=NA)
   
-  # Adding a reverse links for bi-directionals
-  bi_links <- links %>% 
-    filter(is_oneway==0) %>% 
-    rename(from_id=to_id, to_id=from_id, toX=fromX, toY=fromY, fromX=toX, 
-           fromY=toY, slope=rvs_slope_pct) %>% 
-    mutate(id=NA) %>%
-    dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
-                  permlanes, capacity, is_oneway, cycleway, highway, surface, 
-                  slope, is_cycle, is_walk, is_car, modes, id)
-  
-  links <- rbind( 
-    {links %>% dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
-                             permlanes, capacity, is_oneway, cycleway, highway, surface, 
-                             slope=fwd_slope_pct, is_cycle, is_walk, is_car, modes, id)},
-    bi_links) 
+  # # Adding a reverse links for bi-directionals - not required as makeEdgesOneway has made them all oneway
+  # bi_links <- links %>% 
+  #   filter(is_oneway==0) %>% 
+  #   rename(from_id=to_id, to_id=from_id, toX=fromX, toY=fromY, fromX=toX, 
+  #          fromY=toY, slope=rvs_slope_pct) %>% 
+  #   mutate(id=NA) %>%
+  #   dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
+  #                 permlanes, capacity, is_oneway, cycleway, highway, surface, 
+  #                 slope, is_cycle, is_walk, is_car, modes, id)
+  # 
+  # links <- rbind( 
+  #   {links %>% dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
+  #                            permlanes, capacity, is_oneway, cycleway, highway, surface, 
+  #                            slope=fwd_slope_pct, is_cycle, is_walk, is_car, modes, id)},
+  #   bi_links) 
   
   # Adding bicycle and extra information
   links <-  fncols(links, c("id","osm_id", "highway", "cycleway","slope", 

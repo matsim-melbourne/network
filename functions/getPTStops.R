@@ -2,24 +2,23 @@
 
 # requires tidytransit (loaded in NetworkGenerator.R)
 
-getPTStops <- function(city, gtfs_feed, outputCrs, edges_current) {
+getPTStops <- function(city, gtfs_feed, outputCrs, region, regionBufferDist) {
   # city = "Melbourne"
-  # gtfs_feed = "./data/gtfs.zip"
-  # outputCrs = 28355
-  # edges_current = networkDensified[[2]]
+  # gtfs_feed = "../data/processed/gtfs.zip"
+  # outputCrs = 7899
+  # region = "../data/processed/greater_melbourne.sqlite"
+  # regionBufferDist = 10000
   
   # read in GTFS feed
   gtfs <- read_gtfs(gtfs_feed) %>%
     gtfs_as_sf(., crs = 4326)
   
-  # extract stops with their locations
+  # extract stops with their locations, filtered to study area
+  study.area <- st_buffer(st_read(region), regionBufferDist)
   stops <- gtfs$stops %>%
-    st_transform(outputCrs)
-  
-  # limit to stops within the study area (convex hull of edges)
-  stops <- stops %>%
-    st_filter(., st_convex_hull(st_union(edges_current)), 
-              predicate = st_intersects)
+    st_transform(outputCrs) %>%
+    st_set_geometry("geom") %>%
+    st_filter(study.area, predicate = st_intersects)
   
   # table of stops and route types
   stops.routetypes <- gtfs$stop_times %>%
@@ -33,9 +32,12 @@ getPTStops <- function(city, gtfs_feed, outputCrs, edges_current) {
   # apply route types
   route_types = stops.routetypes$route_type %>% unique() %>% sort()
   
-  if (city == "ProvisionForMunich") { # test should be city is Munich AND stops are in the expected list
-    
-  
+  if (city == "exception_city") { 
+    # if a city is known to have exceptional route types, build a condition that 
+    # applies where the city is specified and the route types are in the expected
+    # list - eg city == "Gotham City" & all(route_types %in% c("13", "14", "15")) - 
+    # and provide an appropriate message and function (similar to 'else')
+   
   } else if (!all(route_types %in% c("0", "1", "2", "3", "4", "5", "6", "7", "11", "12"))) {
     message("GTFS Feed contains the following route type codes: ", paste(route_types, collapse = ", "), ". Unable to process these using 
 the standard route codes from https://developers.google.com/transit/gtfs/reference, which are:
@@ -48,7 +50,7 @@ PT stops will not be included in destinations.")
     message("GTFS Feed contains the following route type codes: ", paste(route_types, collapse = ", "), ".
 Using standard route_type codes from https://developers.google.com/transit/gtfs/reference:
    0-tram, 1-metro, 2-train, 3-bus, 4-ferry, 5-cable tram, 6-cable car, 7-funicular, 11-trolleybus, 12 monorail. 
-Check that these match the codes used in your GTFS feed.")
+Adjust 'getPTStops' function if these don't match the codes used in your GTFS feed.")
     stops.routetypes.coded <- stops.routetypes %>%
       mutate(pt_stop_type = case_when(
         route_type == 0  ~ "tram",
@@ -77,7 +79,5 @@ Check that these match the codes used in your GTFS feed.")
   } else {
     return(c())  # empty vector if no stops can be returned
   }
-  
-
   
 }

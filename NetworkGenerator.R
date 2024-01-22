@@ -33,22 +33,22 @@ makeNetwork<-function(city, outputFileName = "test"){
     outputCrs = 7899
     osmGpkg = "../data/processed/bendigo_osm.gpkg"
     unconfiguredSqlite = "../data/processed/bendigo_network_unconfigured.sqlite"
-    # cropAreaPoly = ""  # must set 'crop2Area=F'
+    cropAreaPoly = ""  # must set 'crop2Area=F'
     # demFile = "./data/5m_DEM_reprojected.tif" # MIGHT NOT BE FINAL FILE
     # osmPbfExtract = "./data/brisbane_australia.osm.pbf"
     # ndviFile = ""  # must set 'addNDVI=F'
-    # gtfs_feed = "./data/SEQ_GTFS.zip"
+    gtfs_feed = "../data/processed/gtfs.zip"
     
   } else if (city == "Melbourne") {
     region = "../data/processed/greater_melbourne.sqlite"
     outputCrs = 7899
     osmGpkg = "../data/processed/melbourne_osm.gpkg"
     unconfiguredSqlite = "../data/processed/melbourne_network_unconfigured.sqlite"
-    # cropAreaPoly = "city-of-melbourne_victoria"
+    cropAreaPoly = "city-of-melbourne_victoria"
     # demFile = "./data/DEM_melbourne.tif"
     # osmPbfExtract = "./data/melbourne_australia.osm.pbf"
     # ndviFile = "./data/NDVI_1600mBuffer_Melbourne_reprojected.tif"
-    # gtfs_feed = "./data/gtfs.zip"
+    gtfs_feed = "../data/processed/gtfs.zip"
 
   } else {
     echo(paste("City parameters for", city, "have not been set; unable to proceed\n"))
@@ -65,7 +65,7 @@ makeNetwork<-function(city, outputFileName = "test"){
   # NETWORK FROM OSM 
   # A flag for whether to build unconfigured network from osm extract (if not,
   # must already have unconfigured sqlite)
-  networkFromOsm=T
+  networkFromOsm=F
   saveUnconfigured=T
 
   # SIMPLIFICATION
@@ -74,7 +74,7 @@ makeNetwork<-function(city, outputFileName = "test"){
   crop2Area=F
 
   # DENSIFICATION
-  desnificationMaxLengh=500
+  densificationMaxLength=500
   densifyBikeways=T
 
   # CAPACITY ADJUSTMENT
@@ -84,16 +84,16 @@ makeNetwork<-function(city, outputFileName = "test"){
 
   # ELEVATION
   # A flag for whether to add elevation or not
-  addElevation=T
+  addElevation=F
   ElevationMultiplier=1
   
   # DESTINATIONS
-  # A flag for whether to add a destinations layer (drawn from OSM) or not
+  # A flag for whether to add a destinations layer (drawn from OSM, and GTFS for PT) or not
   addDestinationLayer=T
 
   # NDVI
   # A flag for whether to add NDVI or not
-  addNDVI=T
+  addNDVI=F
   # Buffer distance for finding average NDVI for links
   ndviBuffDist=30
 
@@ -175,14 +175,19 @@ makeNetwork<-function(city, outputFileName = "test"){
   # Processing OSM, or loading existing layers if not required
   if(networkFromOsm) {
     echo(paste0("Starting to process osm extract file, ", osmGpkg, "\n"))
-    networkUnconfigured <- processOsm(osmGpkg, outputCrs)
+    networkUnconfiguredOutputs <- processOsm(osmGpkg, outputCrs)
     
     if (saveUnconfigured) {
-      st_write(networkUnconfigured[[1]], unconfiguredSqlite, layer = "nodes", delete_layer = T)
-      st_write(networkUnconfigured[[2]], unconfiguredSqlite, layer = "edges", delete_layer = T)
-      st_write(networkUnconfigured[[3]], unconfiguredSqlite, layer = "osm_metadata", delete_layer = T)
+      if (file_exists(unconfiguredSqlite)) st_delete(unconfiguredSqlite)
+      st_write(networkUnconfiguredOutputs[[1]], unconfiguredSqlite, layer = "nodes")
+      st_write(networkUnconfiguredOutputs[[2]], unconfiguredSqlite, layer = "edges")
+      st_write(networkUnconfiguredOutputs[[3]], unconfiguredSqlite, layer = "osm_metadata")
     }
     
+    networkUnconfigured <- list(networkUnconfiguredOutputs[[1]],
+                                networkUnconfiguredOutputs[[2]])
+    osm_metadata <- networkUnconfiguredOutputs[[3]]
+
   } else {
     
     if (file_exists(unconfiguredSqlite)) {
@@ -190,6 +195,8 @@ makeNetwork<-function(city, outputFileName = "test"){
       networkUnconfigured <- 
         list(st_read(unconfiguredSqlite, layer = "nodes") %>% st_set_geometry("geom"),
              st_read(unconfiguredSqlite, layer = "edges") %>% st_set_geometry("geom"))
+      osm_metadata <- st_read(unconfiguredSqlite, layer = "osm_metadata") %>%
+        filter(osm_id %in% networkUnconfigured[[2]]$osm_id)
       
     } else {
       echo(paste("Unconfigured network file", unconfiguredSqlite, "not found; unable to proceed\n"))
@@ -197,38 +204,24 @@ makeNetwork<-function(city, outputFileName = "test"){
     }
   }
   
-  # TO DO FROM HERE, and fix up 'networkInput' (now 'networkUnconfigured', and probably 
-  # read in osm_metadata above, after 'networkUnconfigured <-')
   # crop to test area if required
-  if(crop2Area)system.time(networkInput <- crop2Poly(networkInput,
-                                                     cropAreaPoly,
-                                                     outputCrs))
+  if(crop2Area)system.time(networkUnconfigured <- crop2Poly(networkUnconfigured,
+                                                            cropAreaPoly,
+                                                            outputCrs))
+  # process OSM metadata
   echo("processing OSM meta data\n")
-  osm_metadata <- st_read(unconfiguredSqlite,layer="osm_metadata",quiet=T) %>%
-    filter(osm_id%in%networkInput[[2]]$osm_id)
   echo("Building default OSM attribute tables\n")
   defaults_df <- buildDefaultsDF()
   highway_lookup <- defaults_df %>% dplyr::select(highway, highway_order)
   echo("Processing OSM tags and joining with defaults\n")
   system.time( osmAttributes <- processOsmTags(osm_metadata,defaults_df))
   
-  edgesAttributed <- networkInput[[2]] %>%
+  edgesAttributed <- networkUnconfigured[[2]] %>%
     inner_join(osmAttributes, by="osm_id") %>%
-    # dplyr::select(-osm_id,highway,highway_order)
-    dplyr::select(-highway,highway_order)
-  
-  cat(paste0("edgesAttributed:\n"))
-  str(edgesAttributed)
-  cat(paste0("\n"))
+    dplyr::select(-highway, highway_order)
   
   # keep only the largest connected component
-  largestComponent <- largestConnectedComponent(networkInput[[1]],edgesAttributed)
-  
-  cat(paste0("largestComponent, nodes:\n"))
-  str(largestComponent[[1]])
-  cat(paste0("\nlargestComponent, edges:\n"))
-  str(largestComponent[[2]])
-  cat(paste0("\n"))
+  largestComponent <- largestConnectedComponent(networkUnconfigured[[1]], edgesAttributed)
   
   # simplify intersections while preserving attributes and original geometry.
   system.time(intersectionsSimplified <- simplifyIntersections(largestComponent[[1]],
@@ -287,8 +280,8 @@ makeNetwork<-function(city, outputFileName = "test"){
   networkConnected <- largestNetworkSubgraph(networkNonDisconnected,'walk')
   
   # densify the network so that no residential streets are longer than 500m
-  if (addElevation==T & densifyBikeways==F) message("Consider changing densifyBikeways to true when addElevation is true to ge a more accurate slope esimation for bikeways")
-  networkDensified <- densifyNetwork(networkConnected,desnificationMaxLengh,
+  if (addElevation==T & densifyBikeways==F) message("Consider changing densifyBikeways to true when addElevation is true to get a more accurate slope esimation for bikeways")
+  networkDensified <- densifyNetwork(networkConnected,densificationMaxLength,
                                      densifyBikeways)
   
   # Adding NDVI to links
@@ -302,10 +295,12 @@ makeNetwork<-function(city, outputFileName = "test"){
   if (addDestinationLayer) {
     destinations <- addDestinations(networkDensified[[1]],
                                     networkDensified[[2]],
-                                    osmPbfExtract,
+                                    osmGpkg,
                                     city,
                                     gtfs_feed,
-                                    outputCrs)
+                                    outputCrs,
+                                    region,
+                                    regionBufferDist)
   }
 
   # simplify geometry so all edges are straight lines
@@ -381,4 +376,5 @@ makeNetwork<-function(city, outputFileName = "test"){
 }
 
 ## JUST FOR TESTING
-output <- makeNetwork(city = "Bendigo")
+makeNetwork(city = "Bendigo")
+makeNetwork(city = "Melbourne")

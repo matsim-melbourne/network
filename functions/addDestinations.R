@@ -1,76 +1,53 @@
 # function to create a destination layer to add to output network
 
-# assumes input file (OSMextract) is in .osm.pbf format, for example,
-# as downloaded from  https://www.interline.io/osm/extracts/ 
-
 # uses functions for various destination types with tag combinations set out
 # in 'getDestinationTypes.R'
 
-# NOTE - WILL REQUIRE REFACTORING IF THE .GPKG, RATHER THAN THE .OSM.PBF, IS
-# SAVED AS THE BASE FILE - NEED TO EXTRACT THE OTHER TAGS FROM THE .GPKG
-
 addDestinations <- function(nodes_current, 
                             edges_current, 
-                            osmPbfExtract,
+                            osmGpkg,
                             city, 
                             gtfs_feed,
-                            outputCrs) {
-
+                            outputCrs,
+                            region,
+                            regionBufferDist) {
+   
   # nodes_current = networkDensified[[1]]
   # edges_current = networkDensified[[2]]
-  # osmPbfExtract = "./data/melbourne_australia.osm.pbf"
+  # osmGpkg = "../data/processed/melbourne_osm.gpkg"
   # city = "Melbourne"
-  # gtfs_feed = "./data/gtfs.zip"
+  # gtfs_feed = "../data/processed/gtfs.zip"
   # outputCrs = 28355
-  
-  # # check layers
-  # st_layers(osmPbfExtract)
-  # # only multipolygons, points and lines are required (not multilinestrings
-  # # or other_relations) [and lines not required when using GTFS for PT stops]
   
   # # check keys
   # options(max.print = 2000)
-  # polygon.tags <- oe_get_keys(osmPbfExtract, layer = "multipolygons") %>% sort()
-  # point.tags <- oe_get_keys(osmPbfExtract, layer = "points") %>% sort()
-  # line.tags <- oe_get_keys(osmPbfExtract, layer = "lines") %>% sort()
-  
+  # point.tags <- oe_get_keys(osmGpkg, layer = "points") %>% sort()
+  # polygon.tags <- oe_get_keys(osmGpkg, layer = "multipolygons") %>% sort()
+
   # reading layers ----
   # ----------------------------------#
-  echo("Reading in the .osm.pbf extract layers\n")
+  echo("Reading in the OSM layers\n")
 
-  # create gpkg file in same directory as osmPbfExtract, using the 'extra_tags'
-  # Note:
-  # - the gpkg does not need to be retained permanently, but its creation is part
-  #   of the process of reading the layers; if already created, the reading 
-  #   process will be quicker)
-  # - for simplicity, the same extra tags are added for all layers, though
-  #   some don't exist for some layer types
-  extra.tags <- c("access", "amenity", "building", "grades", "healthcare", 
-                  "healthcare:speciality", "isced:level", "landuse", "leisure", 
-                  "network", "operator", "operator:type", "parking", 
-                  "public_transport", "railway", "school", "shop", 
-                  "social_facility",  "sport", "tourism", "train")
-  # oe_vectortranslate(osmPbfExtract, layer = "multipolygons", extra_tags = extra.tags)
-  # oe_vectortranslate(osmPbfExtract, layer = "points", extra_tags = extra.tags)
-  # oe_vectortranslate(osmPbfExtract, layer = "lines", extra_tags = extra.tags)
-  # 
-  # # read in the .gpkg file (same directory and name as .osm.pbf file, but .gpkg extension)
-  # gpkg <- paste0(path_dir(osmPbfExtract), "/", 
-  #                gsub(".osm.pbf", ".gpkg", path_file(osmPbfExtract)))
+  extra.tag.string <- "SELECT *, 
+                      hstore_get_value(other_tags, 'access') AS access,
+                      hstore_get_value(other_tags, 'amenity') AS amenity,
+                      hstore_get_value(other_tags, 'grades') AS grades,
+                      hstore_get_value(other_tags, 'healthcare') AS healthcare,
+                      hstore_get_value(other_tags, 'isced:level') AS isced_level,
+                      hstore_get_value(other_tags, 'leisure') AS leisure,
+                      hstore_get_value(other_tags, 'parking') AS parking,
+                      hstore_get_value(other_tags, 'school') AS school,
+                      hstore_get_value(other_tags, 'shop') AS shop,
+                      hstore_get_value(other_tags, 'sport') AS sport"
+
   # read in the layers
-  polygons <- oe_read(osmPbfExtract, layer = "multipolygons", extra_tags = extra.tags) %>% 
-    st_transform(outputCrs)
-  points <- oe_read(osmPbfExtract, layer = "points", extra_tags = extra.tags) %>% 
-    st_transform(outputCrs)
-  # lines <- oe_read(osmPbfExtract, layer = "lines", extra_tags = extra.tags) %>% 
-  #   st_transform(outputCrs)
-
+  points <- oe_read(osmGpkg, query = paste(extra.tag.string, "FROM points"), quiet = TRUE)
+  polygons <- oe_read(osmGpkg, query = paste(extra.tag.string, "FROM multipolygons"), quiet = TRUE)
 
   # function to extract specific destination types from point or polygon layers ----
   # ----------------------------------#
   # all the tag combination functions in 'getDestinationTypes.R' apply to both
-  # points and polygons, except 'railway station', which are a combination of
-  # point, polygon and line features
+  # points and polygons
   
   destination.layer <- function(layer) {
     return(
@@ -106,44 +83,36 @@ addDestinations <- function(nodes_current,
   # and store area and location details
   destination.pt <- 
     bind_rows(destination.layer(points),
-
-              # # add stations (from point, polygons and lines) to point table
-              # getStation(points, polygons, lines) %>% 
-              # mutate(dest_type = "railway_station")) %>%
               
               # add PT stops (from GTFS feed) to point table
-              getPTStops(city, gtfs_feed, outputCrs, edges_current) %>%
+              getPTStops(city, gtfs_feed, outputCrs, region, regionBufferDist) %>%
                 mutate(dest_type = "pt_stop")) %>%
     
     mutate(dest_id = row_number(),
            area_m2 = 0,
            centroid_x = st_coordinates(.)[, 1],
            centroid_y = st_coordinates(.)[, 2])
-              
+  
   destination.poly <- 
     destination.layer(polygons) %>%
+    filter(st_is_valid(geom)) %>%
     mutate(dest_id = max(destination.pt$dest_id) + row_number(),
            area_m2 = as.numeric(st_area(.)),
            centroid_x = st_coordinates(st_centroid(.))[, 1],
            centroid_y = st_coordinates(st_centroid(.))[, 2])
   
-  # Remove any invalid polygons as they may cause errors
-  destination.poly <- destination.poly[which(st_is_valid(destination.poly$geometry)), ]
-  
-  # Remove any invalid polygons as they may cause errors
-  destination.poly <- destination.poly[which(st_is_valid(destination.poly$geometry)), ]
-  
+
   # # check numbers of each destination type
   # chk <- full_join(destination.poly %>%
   #                    st_drop_geometry() %>%
   #                    group_by(dest_type) %>%
-  #                    summarise(poly = n()), 
+  #                    summarise(poly = n()),
   #                  destination.pt %>%
   #                    st_drop_geometry() %>%
   #                    group_by(dest_type) %>%
-  #                    summarise(pt = n()), 
+  #                    summarise(pt = n()),
   #                  by = "dest_type")
-  
+
   
   # find relevant nodes ----
   # For all destinations except parks and schools ('small features'), relevant 
