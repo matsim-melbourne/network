@@ -164,7 +164,7 @@ makeNetwork<-function(city, outputFileName = "test"){
   # Downloading OSM
   if (downloadOsm) {
     echo(paste0("Downloading OSM extract for ", city, "\n"))
-    getOsmExtract(region, outputCrs, regionBufferDist, osmGpkg)
+    getOsmExtract(region, outputCrs, regionBufferDist, osmGpkg, retainDownload)
   }
   
   # Processing OSM, or loading existing layers if not required
