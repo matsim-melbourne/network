@@ -29,26 +29,26 @@ makeNetwork<-function(city, outputFileName = "test"){
   #   GTFS data (and, if 'addGtfs=T', also set start and end dates in GTFS section)
 
   if (city == "Bendigo") {
-    region = "../data/processed/greater_bendigo.sqlite"
+    region = "./data/processed/greater_bendigo.sqlite"
     outputCrs = 7899
-    osmGpkg = "../data/processed/bendigo_osm.gpkg"
-    unconfiguredSqlite = "../data/processed/bendigo_network_unconfigured.sqlite"
+    osmGpkg = "./data/processed/bendigo_osm.gpkg"
+    unconfiguredSqlite = "./data/processed/bendigo_network_unconfigured.sqlite"
     cropAreaPoly = ""  # must set 'crop2Area=F'
     # demFile = "./data/5m_DEM_reprojected.tif" # MIGHT NOT BE FINAL FILE
     # osmPbfExtract = "./data/brisbane_australia.osm.pbf"
     # ndviFile = ""  # must set 'addNDVI=F'
-    gtfs_feed = "../data/processed/gtfs.zip"
+    gtfs_feed = "./data/processed/gtfs.zip"
     
   } else if (city == "Melbourne") {
-    region = "../data/processed/greater_melbourne.sqlite"
+    region = "./data/processed/greater_melbourne.sqlite"
     outputCrs = 7899
-    osmGpkg = "../data/processed/melbourne_osm.gpkg"
+    osmGpkg = "./data/processed/melbourne_osm.gpkg"
     unconfiguredSqlite = "../data/processed/melbourne_network_unconfigured.sqlite"
     cropAreaPoly = "city-of-melbourne_victoria"
     # demFile = "./data/DEM_melbourne.tif"
     # osmPbfExtract = "./data/melbourne_australia.osm.pbf"
     # ndviFile = "./data/NDVI_1600mBuffer_Melbourne_reprojected.tif"
-    gtfs_feed = "../data/processed/gtfs.zip"
+    gtfs_feed = "./data/processed/gtfs.zip"
 
   } else {
     echo(paste("City parameters for", city, "have not been set; unable to proceed\n"))
