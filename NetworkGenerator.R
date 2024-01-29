@@ -15,40 +15,36 @@ makeNetwork<-function(city, outputFileName = "test"){
   # •	osmGpkg: location where downloaded OSM extract for region is to be stored
   #   (if 'downloadOsm=T') and/or read from (if 'processOsm=T')
   # •	unconfiguredSqlite: location where processed OSM file is to be stored
-  #   (if 'processOsm=T') or read from (if 'processOsm=F')
+  #   (if 'networkFromOsm=T') or read from (if 'networkFromOsm=F')
   # •	cropAreaPoly: if 'crop2TestArea=T' cropArea location from 
   #   https://github.com/JamesChevalier/cities/tree/master/australia/victoria 
   #   (only supported for Victoria at this stage)
   # •	demFile: if 'addElevation=T', digital elevation model raster file (must be 
   #   in same coordinate system as network)
-  # •	osmPbfExtract: if 'addDestinationLayer=T', OSM extract for destinations, 
-  #   in .osm.pbf format
   # •	ndviFile: if 'addNDVI=T', raster file with NDVI values (must be in same
   #   coordinate system as network)
   # •	gtfs_feed: if 'addGtfs=T' or 'addDestinationLayer=T, zip file containing 
   #   GTFS data (and, if 'addGtfs=T', also set start and end dates in GTFS section)
 
   if (city == "Bendigo") {
-    region = "./data/processed/greater_bendigo.sqlite"
+    region = "./data/greater_bendigo.sqlite"
     outputCrs = 7899
-    osmGpkg = "./data/processed/bendigo_osm.gpkg"
-    unconfiguredSqlite = "./data/processed/bendigo_network_unconfigured.sqlite"
+    osmGpkg = "./data/bendigo_osm.gpkg"
+    unconfiguredSqlite = "./data/bendigo_network_unconfigured.sqlite"
     cropAreaPoly = ""  # must set 'crop2Area=F'
     # demFile = "./data/5m_DEM_reprojected.tif" # MIGHT NOT BE FINAL FILE
-    # osmPbfExtract = "./data/brisbane_australia.osm.pbf"
     # ndviFile = ""  # must set 'addNDVI=F'
-    gtfs_feed = "./data/processed/gtfs.zip"
+    gtfs_feed = "./data/gtfs.zip"
     
   } else if (city == "Melbourne") {
-    region = "./data/processed/greater_melbourne.sqlite"
+    region = "./data/greater_melbourne.sqlite"
     outputCrs = 7899
-    osmGpkg = "./data/processed/melbourne_osm.gpkg"
-    unconfiguredSqlite = "./data/processed/melbourne_network_unconfigured.sqlite"
+    osmGpkg = "./data/melbourne_osm.gpkg"
+    unconfiguredSqlite = "./data/melbourne_network_unconfigured.sqlite"
     cropAreaPoly = "city-of-melbourne_victoria"
     # demFile = "./data/DEM_melbourne.tif"
-    # osmPbfExtract = "./data/melbourne_australia.osm.pbf"
     # ndviFile = "./data/NDVI_1600mBuffer_Melbourne_reprojected.tif"
-    gtfs_feed = "./data/processed/gtfs.zip"
+    gtfs_feed = "./data/gtfs.zip"
 
   } else {
     echo(paste("City parameters for", city, "have not been set; unable to proceed\n"))
