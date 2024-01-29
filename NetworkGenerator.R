@@ -43,7 +43,7 @@ makeNetwork<-function(city, outputFileName = "test"){
     region = "./data/processed/greater_melbourne.sqlite"
     outputCrs = 7899
     osmGpkg = "./data/processed/melbourne_osm.gpkg"
-    unconfiguredSqlite = "../data/processed/melbourne_network_unconfigured.sqlite"
+    unconfiguredSqlite = "./data/processed/melbourne_network_unconfigured.sqlite"
     cropAreaPoly = "city-of-melbourne_victoria"
     # demFile = "./data/DEM_melbourne.tif"
     # osmPbfExtract = "./data/melbourne_australia.osm.pbf"
@@ -65,7 +65,7 @@ makeNetwork<-function(city, outputFileName = "test"){
   # NETWORK FROM OSM 
   # A flag for whether to build unconfigured network from osm extract (if not,
   # must already have unconfigured sqlite)
-  networkFromOsm=F
+  networkFromOsm=T
   saveUnconfigured=T
 
   # SIMPLIFICATION
