@@ -3,7 +3,8 @@
 getOsmExtract <- function(region, 
                           outputCrs, 
                           regionBufferDist = 10000, 
-                          osmGpkg) {
+                          osmGpkg,
+                          retainDownload) {
   
   # region = "../data/processed/greater_bendigo.sqlite"
   # outputCrs = 7899
