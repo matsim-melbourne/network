@@ -10,12 +10,12 @@ restructureData <- function(networkList, highway_lookup,
   # finding merged bikepath ids
   bikepath_uids <- links %>% 
     st_drop_geometry() %>% 
-    filter((cycleway=="4" | cycleway=="5") & highway_order<15) %>% 
+    filter((cycleway == "4" | cycleway == "5") & highway_order < 16) %>% 
     dplyr::select(uid) %>% unlist() %>%  as.double()
   # changing merged bikepaths to regular bikepaths
   bikepaths <- links %>% 
     filter(uid %in% bikepath_uids) %>% 
-    mutate(highway_order=15) %>% 
+    mutate(highway_order = 16) %>% 
     mutate(freespeed=defaults_df$freespeed[15]) %>% 
     mutate(laneCapacity=defaults_df$laneCapacity[15]) %>% 
     mutate(is_car=0) %>% 

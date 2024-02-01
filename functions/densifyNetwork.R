@@ -13,9 +13,9 @@
 # "road"           ,  7            
 # "unclassified"   ,  13           
 # "living_street"  ,  14           
-# "cycleway"       ,  15           
-# "track"          ,  16           
-# "service"        ,  17           
+# "service"        ,  15           
+# "cycleway"       ,  16           
+# "track"          ,  17           
 # "pedestrian"     ,  18           
 # "footway"        ,  19           
 # "path"           ,  20           
@@ -32,9 +32,9 @@ densifyNetwork <- function(networkList, minimum_length=400, densifyBikeways=F){
     links_to_segmentize <- links_df %>%
       filter(length>minimum_length & is_cycle==1)
   }else{
-  # Densifying all except for "cycleway", "footway","motorway","motorway_link","path","pedestrian","pt","steps","track")
+  # Densifying all except for "cycleway", "footway","motorway","motorway_link","path","pedestrian","corridor","steps","track")
     links_to_segmentize <- links_df %>%
-      filter(length>minimum_length & !highway_order%in%c(1,8,15,16,18,19,20,21,22))
+      filter(length>minimum_length & !highway_order%in%c(1,8,16,17,18,19,20,21,22))
   }
 
   links_unsegmented <- links_df %>%
