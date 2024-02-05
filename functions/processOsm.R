@@ -2,8 +2,8 @@
 
 processOsm <- function(osmGpkg, outputCrs) {
   
-  # osmGpkg = "../data/processed/bendigo_osm.gpkg"
-  # osmGpkg = "../data/processed/melbourne_osm.gpkg"
+  # osmGpkg = "./data/bendigo_osm.gpkg"
+  # osmGpkg = "./data/melbourne_osm.gpkg"
   # outputCrs = 7899
   
   # read in OSM data
@@ -54,25 +54,48 @@ processOsm <- function(osmGpkg, outputCrs) {
   
   # find intersections, but excluding any on different levels as
   # determined by bridge_tunnel
-  
-  # intersection points - intersect paths with a copy of itself, select points, 
-  # keep where bridge/tunnel matches
   echo("Finding path intersections\n")
-  system.time(
-  intersections <- paths %>%
-    # intersect with itself -  produces a separate point for each pair of links
-    # that intersect at an intersection (and also produces line intersections)
-    st_intersection(., paths %>% dplyr::select(bridge_tunnel_a = bridge_tunnel)) %>%
-    # keep just the points
+  
+  # intersect paths with a copy of itself - produces point for each pair of links
+  # that intersect at an intersection (and also produces line intersections)
+  intersection.base <- paths %>%
+    st_intersection(., paths %>% 
+                      dplyr::select(osm_id_a = osm_id, 
+                                    bridge_tunnel_a = bridge_tunnel))
+  
+  # point intersections that are on the same level
+  intersection.points <- intersection.base %>%
+    # keep just the points where bridge_tunnel match (at grade, both bridge or both tunnel)
     st_collection_extract("POINT") %>%
-    # only keep where bridge_tunnel match (at grade, both bridge or both tunnel)
-    filter(bridge_tunnel == bridge_tunnel_a) %>%
-    # combine where same location with same osm_id
+    filter(bridge_tunnel == bridge_tunnel_a)
+  
+  # line intersections that are on the same level, and that are not the same osm_id
+  # - that is, keep where there are two overlapping lines in osm with separate osm_id's
+  intersection.lines <- intersection.base %>%
+    st_collection_extract("LINESTRING") %>%
+    filter(bridge_tunnel == bridge_tunnel_a &
+             osm_id != osm_id_a)
+  
+  # combine the point intersections and the line start/end points, with the
+  # osm_ids of their paths (used for splitting the lines)
+  intersections <- bind_rows(
+    # points
+    intersection.points,
+    # line start points (with the osm_id's of their paths)
+    intersection.lines %>% 
+      st_startpoint() %>% st_sf() %>% st_set_geometry("geom") %>%
+      cbind(osm_id = intersection.lines$osm_id), 
+    # line end points (with the osm_id's of their paths)
+    intersection.lines %>% 
+      st_endpoint() %>% st_sf() %>% st_set_geometry("geom") %>%
+      cbind(osm_id = intersection.lines$osm_id)
+  ) %>%
+  # combine where same location with same osm_id
     group_by(osm_id, geom) %>%
     summarise() %>%
     ungroup()
-  )
-  
+
+
   # temp dev notes (SP): 
   # (1) compared to network.sql, this only places intersections where both are 
   #     bridges, both are tunnels, or both are neither (whereas network.sql, 
