@@ -17,22 +17,22 @@ ALTER TABLE roads_split
 ALTER TABLE roads_points
  ALTER COLUMN geom TYPE geometry(Point,:v1)
   USING ST_SnapToGrid(ST_Transform(geom,:v1),1);
-CREATE INDEX roads_points_gix ON roads USING GIST (geom);
+CREATE INDEX roads_points_gix ON roads_points USING GIST (geom);
 
 -- determine if the road segment is a bridge or tunnel
-ALTER TABLE roads ADD COLUMN bridge_or_tunnel BOOLEAN;
-UPDATE roads
+ALTER TABLE roads_split ADD COLUMN bridge_or_tunnel BOOLEAN;
+UPDATE roads_split
   SET bridge_or_tunnel =
        CASE WHEN other_tags LIKE '%bridge%' OR other_tags LIKE '%tunnel%' THEN TRUE
        ELSE FALSE END;
-CREATE INDEX roads_gix ON roads USING GIST (geom);
+CREATE INDEX roads_split_gix ON roads_split USING GIST (geom);
 
 -- find the bridge-bridge or road-road intersections
 DROP TABLE IF EXISTS line_intersections;
 CREATE TABLE line_intersections AS
 SELECT a.osm_id AS osm_id_a, b.osm_id AS osm_id_b,
   ST_Intersection(a.geom,b.geom) AS geom
-FROM roads AS a, roads AS b
+FROM roads_split AS a, roads_split AS b
 WHERE a.osm_id < b.osm_id AND
   a.bridge_or_tunnel = b.bridge_or_tunnel AND
   ST_Intersects(a.geom, b.geom) = TRUE;
@@ -62,10 +62,10 @@ CREATE TABLE line_intersections_grouped AS
 SELECT c.osm_id, st_unaryunion(st_collect(c.geom)) AS geom
 FROM
  (SELECT a.osm_id_a AS osm_id, a.geom
-  FROM line_intersections as a
+  FROM line_intersections2 as a
   UNION
   SELECT b.osm_id_b AS osm_id, b.geom
-  FROM line_intersections AS b) AS c
+  FROM line_intersections2 AS b) AS c
 GROUP BY osm_id;
 
 -- take the intersections, buffer them 0.01m, and use them to cut the lines they
