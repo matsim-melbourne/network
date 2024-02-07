@@ -50,48 +50,4 @@ getRegion(input.file = read_zipped_GIS(zipfile = "./data/GCCSA_2021_AUST_SHP_GDA
 
 # 2 Elevation from whole of state file ----
 # -----------------------------------------------------------------------------#
-# function for extracting region's elevation from whole of state file
-getRegionDem <- function(dem.location, region.location, 
-                         output.filename, outputCrs) {
-  dem <- rast(dem.location) %>%
-    project(., outputCrs)
-  
-  region <- st_read(region.location)
-  
-  dem.cropped <- terra::crop(x = dem, y = region %>% st_buffer(1))
-  
-  writeRaster(dem.cropped, paste0("./data/", output.filename, ".tif"), 
-              gdal = "COMPRESS = DEFLATE", overwrite = TRUE)
-}
-
-# Bendigo
-getRegionDem(dem.location = "./data/vmelev_dem10m_ESRI_grid_GDA94_VicGrid/vmelev_dem10m_ESRI_grid_GDA94_Vicgrid/vmelev_dem10m/dem10m/hdr.adf",
-             region.location = "./data/greater_bendigo.sqlite",
-             output.filename = "DEM_bendigo", outputCrs = 7899)
-
-# Melbourne
-getRegionDem(dem.location = "./data/vmelev_dem10m_ESRI_grid_GDA94_VicGrid/vmelev_dem10m_ESRI_grid_GDA94_Vicgrid/vmelev_dem10m/dem10m/hdr.adf",
-             region.location = "./data/greater_melbourne.sqlite",
-             output.filename = "DEM_melbourne", outputCrs = 7899)
-
-
-
-# from other file
-dem <- rast("./data/vmelev_dem10m_ESRI_grid_GDA94_VicGrid/vmelev_dem10m_ESRI_grid_GDA94_Vicgrid/vmelev_dem10m/dem10m/hdr.adf") %>%
-  # transform to project crs
-  project(., "EPSG:28355")
-
-# load network
-network <- st_read("./data/melbourne_network_unconfigured.sqlite")
-
-# crop dem to network (will crop to bounding box)
-dem.network <- terra::crop(x = dem, y = network %>% st_buffer(1))
-
-# save output
-writeRaster(dem.network, 
-            "./data/DEM_melbourne.tif", 
-            gdal = "COMPRESS = DEFLATE",
-            overwrite = TRUE)
-
-
-
+# [to come]
