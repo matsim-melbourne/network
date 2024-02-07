@@ -1,8 +1,8 @@
-makeNetwork<-function(city, outputFileName = "test"){
+makeNetwork<-function(city, outputSubdirectory = "generated_network"){
   # city = "Bendigo"
   # city = "Melbourne"
   
-  # outputFileName = "network"
+  # outputSubdirectory = "generated_network"
   
   # Parameters --------------------------------------------------------------
   
@@ -99,10 +99,10 @@ makeNetwork<-function(city, outputFileName = "test"){
   analysis_end = as.Date("2019-10-17","%Y-%m-%d") # Transit Feed end date
 
   # Outputs
-  # outputFileName=format(Sys.time(),"%d%b%y_%H%M") # date_hour, eg. "17Aug21_1308"
-  if(exists("outputFileName")){
-    outputFileName=outputFileName
-  }else{outputFileName="test"}
+  # outputSubdirectory=format(Sys.time(),"%d%b%y_%H%M") # date_hour, eg. "17Aug21_1308"
+  if(exists("outputSubdirectory")){
+    outputSubdirectory=outputSubdirectory
+  } else {outputSubdirectory="generated_network"}
   writeXml=F
   writeShp=F
   writeSqlite=T
@@ -128,8 +128,8 @@ makeNetwork<-function(city, outputFileName = "test"){
   
 
   # Building the output folder structure ------------------------------------
-  outputDir <- paste0("output/",outputFileName)
-  if(dir.exists(outputDir)) dir_delete(outputDir)
+  outputDir <- paste0("output/",outputSubdirectory)
+  if(outputSubdirectory != "" & dir.exists(outputDir)) dir_delete(outputDir)
   dir_create(paste0('./',outputDir))
   sink(paste0('./',outputDir,'/makeMatsimNetwork.log'), append=FALSE, split=TRUE)
   if (addGtfs) dir_create(paste0(outputDir,"/gtfs"))
@@ -364,6 +364,9 @@ makeNetwork<-function(city, outputFileName = "test"){
   if(writeSqlite) system.time(exportSQlite(networkFinal, outputDir, outputCrs))
   if(writeShp) system.time(exportShp(networkFinal, outputDir, outputCrs))
   if(writeXml) system.time(exportXML(networkFinal, outputDir)) 
+  
+  # end logging
+  sink()
 }
 
 ## JUST FOR TESTING
