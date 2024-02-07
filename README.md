@@ -26,16 +26,19 @@ Adjustable parameters are listed under the Parameters sub-heading.
 Running the algorithm requires an input parameter 'city', and adjustable parameters must be completed for that city, specifying locations of relevant input files and the applicable CRS. If running for a location for which 'city' parameters have not already been defined, then these must be added, using existing city parameters as a template.
 
 The city parameters are as follows.
-* region - required if OSM extract is to be downloaded, or destinations (see below) are to be extracted. This must be the location of a file in sqlite format which defines the boundary of the area for which the OSM extract is required.
-* outputCrs - specify the appropriate EPSG coordinate reference system number for the region.
-* osmGpkg - the location to which an OSM extract in .gpkg format will be saved, or where an existing .gpkg file is stored if already held.
-* unconfiguredSqlite - the location to which an unconfigured network in .sqlite format will be saved, or where an existing unconfigured network is stored if already held.
-* cropAreaPoly - an optional parameter for cropping the OSM extract to a smaller test area. 
-* demFile - required if 'addElevation' is set to 'T'.  This must be the location of a digital elevation model raster file in the same CRS as the the network.
-* ndviFile - required if 'addNDVI' is set to 'T'.  This must be the location of a raster file with NDVI values in the same CRS as the network.
-* gtfs_feed - required if 'addGtfs' or 'addDestinationLayer' is set to 'T'.  This must be the location of a zip file containing GTFS data.
 
-The parameters assume that the relevant files are stored in the a 'data' subdirectory.
+| Parameter          | Parameter type | Requirements                            |
+|--------------------|----------------|-----------------------------------------|
+| region             | .sqlite file   | Required if OSM extract is to be downloaded, or destinations (see below) are to be extracted. This must be the location of a file in sqlite format which defines the boundary of the area for which the OSM extract is required.|
+| outputCrs          | CRS            |Specify the appropriate EPSG coordinate reference system number for the region.|
+| osmGpkg            | .gpkg file     | The location to which an OSM extract in .gpkg format will be saved, or where an existing .gpkg file is stored if already held.|
+| unconfiguredSqlite | .sqlite file   | The location to which an unconfigured network in .sqlite format will be saved, or where an existing unconfigured network is stored if already held.|
+| cropAreaPoly       | area location  | An optional parameter for cropping the OSM extract to a smaller test area. See https://github.com/JamesChevalier/cities/tree/master/australia/victoria for available locations.  |
+| demFile            | .tif file      | Required if 'addElevation' is set to 'T'.  This must be the location of a digital elevation model raster file in the same CRS as the the network.   |
+| ndviFile           | .tif file      | Required if 'addNDVI' is set to 'T'.  This must be the location of a raster file with NDVI values in the same CRS as the network.   |
+| gtfs_feed          | gtfs .zip file | Required if 'addGtfs' or 'addDestinationLayer' is set to 'T'.  This must be the location of a zip file containing GTFS data. |
+
+**The parameters assume that the region file and (if used) the demFile, ndviFile and gtfs_feed are stored in the 'data' subdirectory.**  See `data/README.md` for more detail on obtaining the data files. 
 
 The algorithm will do the following:
 * if 'downloadOsm' is set to 'T', download an OSM extract for the selected 'region' and save it as a .gpkg file.

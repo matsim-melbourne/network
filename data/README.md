@@ -1,37 +1,36 @@
-# Update required
-
-The information below requires update, once final data location and structure is determined.
-
 # Network generation data
 
-This directory contains inputs files required to generate a MATSim network for Melbourne, which can be found [here](https://cloudstor.aarnet.edu.au/plus/s/ssLkX8Uez64rV3D). Alternatively, you can use the `./prepare.sh` command as described below to download the data you need.
+This directory contains input files required to generate MATSim networks for Bendigo and Melbourne, which can be found [here](https://osf.io/ajycn/). 
 
-## How to populate
+## Files to download
 
-To populate this directory with the required data files, use the `./prepare.sh` with the relevant arguments. Valid arguments and their descriptions are presented in the table below:
+Download the following files for the relevant network location.
 
-| Argument | Input file                   | Description                                   |
-|----------|------------------------------|-----------------------------------------------|
-| -region  | studyRegion.sqlite           | Greater Melbourne region                      |
-| -osm19   | melbourne.osm                | Raw OSM file for Melbourne, 2019              |
-| -melb    | melbourne.sqlite             | Road attributes                               |
-| -net     | network.sqlite               | non-planar edges and nodes                    |
-| -gtfs19  | gtfs_au_vic_ptv_20191004.zip | GTFS feed - 2019-10-04                        |
-| -demx10  | DEMx10EPSG28355.tif          | Digital Elevation Model data (x10, EPSG28355) |
-| -A       | all of the above             | It Will download all the input files, (~1.2gb)|
+### Bendigo
+| File                     | Description                                       |
+|--------------------------|---------------------------------------------------|
+| greater_bendigo.sqlite   | Boundary of the Greater Bendigo Local Government Area |
+| [to come]                | Digital elevation model data for the Greater Bendigo area |
+| [to come]                | [NDVI] data for the Greater Bendigo area              |
+| gtfs.zip                 | GTFS feed for Victoria as at 20 October 2023      |
 
-As an example, to start from processing raw OSM (step 1), and generating a network without elevation and public transport, you need to run the following to get the required input:
-```
-./prepare.sh -osm19
-```
 
-Alternatively, if you want to skip processing raw OSM and start directly from `makeNetwork.sh`, and generate a network that has elevation and PT network from GTFS, you need to run the following to download required inputs:
-```
-./prepare.sh -melb -net -gtfs19 -demx10
-```
-If you are not sure about which inputs are required, just simply run the following to download all the inputs:
-```
-./prepare.sh -A
-```
+### Melbourne
+| File                     | Description                                       |
+|--------------------------|---------------------------------------------------|
+| greater_melbourne.sqlite | Boundary of the Greater Melbourne Greater Capital City Statistical Area |
+| [to come]                | Digital elevation model data for the Greater Melbourne area |
+| [to come]                | [NDVI] data for the Greater Melbourne area        |
+| gtfs.zip                 | GTFS feed for Victoria as at 20 October 2023      |
 
-If any issues with the script, please download each required file directly.
+
+## Other files
+
+The directory also contains the following other files, from which the region boundary [and DEM] files above were created, using the code contained in `data/data prep tools.R`.  That code may also be useful to generate similar data input files for other locations if required.
+
+| File                            | Description                                |
+|---------------------------------|--------------------------------------------|
+| LGAs.zip                        | Local government areas of Victoria (VICMAP)  |
+| GCCSA_2021_AUST_SHP_GDA2020.zip | Greater capital city statistical areas (ABS) |
+| [to come]                       | Digital elevation model data for Victoria  |
+
