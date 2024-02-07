@@ -14,9 +14,9 @@ addDestinations <- function(nodes_current,
    
   # nodes_current = networkDensified[[1]]
   # edges_current = networkDensified[[2]]
-  # osmGpkg = "../data/processed/melbourne_osm.gpkg"
+  # osmGpkg = "./data/melbourne_osm.gpkg"
   # city = "Melbourne"
-  # gtfs_feed = "../data/processed/gtfs.zip"
+  # gtfs_feed = "./data/gtfs.zip"
   # outputCrs = 28355
   
   # # check keys

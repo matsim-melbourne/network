@@ -2,8 +2,8 @@
 
 processOsm <- function(osmGpkg, outputCrs) {
   
-  # osmGpkg = "./data/bendigo_osm.gpkg"
-  # osmGpkg = "./data/melbourne_osm.gpkg"
+  # osmGpkg = "./output/bendigo_osm.gpkg"
+  # osmGpkg = "./output/melbourne_osm.gpkg"
   # outputCrs = 7899
   
   # read in OSM data

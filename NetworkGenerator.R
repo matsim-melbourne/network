@@ -29,8 +29,8 @@ makeNetwork<-function(city, outputFileName = "test"){
   if (city == "Bendigo") {
     region = "./data/greater_bendigo.sqlite"
     outputCrs = 7899
-    osmGpkg = "./data/bendigo_osm.gpkg"
-    unconfiguredSqlite = "./data/bendigo_network_unconfigured.sqlite"
+    osmGpkg = "./output/bendigo_osm.gpkg"
+    unconfiguredSqlite = "./output/bendigo_network_unconfigured.sqlite"
     cropAreaPoly = ""  # must set 'crop2Area=F'
     # demFile = "./data/5m_DEM_reprojected.tif" # MIGHT NOT BE FINAL FILE
     # ndviFile = ""  # must set 'addNDVI=F'
@@ -39,8 +39,8 @@ makeNetwork<-function(city, outputFileName = "test"){
   } else if (city == "Melbourne") {
     region = "./data/greater_melbourne.sqlite"
     outputCrs = 7899
-    osmGpkg = "./data/melbourne_osm.gpkg"
-    unconfiguredSqlite = "./data/melbourne_network_unconfigured.sqlite"
+    osmGpkg = "./output/melbourne_osm.gpkg"
+    unconfiguredSqlite = "./output/melbourne_network_unconfigured.sqlite"
     cropAreaPoly = "city-of-melbourne_victoria"
     # demFile = "./data/DEM_melbourne.tif"
     # ndviFile = "./data/NDVI_1600mBuffer_Melbourne_reprojected.tif"

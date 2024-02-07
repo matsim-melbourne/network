@@ -6,10 +6,10 @@ getOsmExtract <- function(region,
                           osmGpkg,
                           retainDownload) {
   
-  # region = "../data/processed/greater_bendigo.sqlite"
+  # region = "../data/greater_bendigo.sqlite"
   # outputCrs = 7899
   # regionBufferDist = 10000  # 10km
-  # osmGpkg = "../data/processed/bendigo_osm.gpkg"
+  # osmGpkg = "../output/bendigo_osm.gpkg"
 
   # load region and buffer by selected distance (eg 10km)
   region <- st_read(region)
