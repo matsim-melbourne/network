@@ -50,4 +50,36 @@ getRegion(input.file = read_zipped_GIS(zipfile = "./data/GCCSA_2021_AUST_SHP_GDA
 
 # 2 Elevation from whole of state file ----
 # -----------------------------------------------------------------------------#
-# [to come]
+# Download 10m DEM for Victoria from https://discover.data.vic.gov.au/dataset/vicmap-elevation-dem-10m,
+# and manually unzip it into the data folder - about 9.3GB (programmatic unzipping 
+# may not work for such a large file)
+
+# function for extracting region's elevation from whole of state file
+getRegionDem <- function(dem.location, region.location, regionBufferDist,
+                         output.filename, outputCrs) {
+  
+  # read in the raster, and convert to outputCrs if necessary
+  dem <- rast(dem.location)
+  if (!same.crs(dem, outputCrs)) dem <- project(dem, outputCrs)
+
+  # region, buffered to selected distance (eg 10km)
+  region <- st_read(region.location) %>% st_buffer(regionBufferDist)
+  
+  # crop the DEM to the region
+  dem.cropped <- terra::crop(x = dem, y = region %>% st_buffer(1))
+  
+  # write output
+  writeRaster(dem.cropped, paste0("./data/", output.filename, ".tif"), 
+              gdal = "COMPRESS = DEFLATE", overwrite = TRUE)
+}
+
+# Bendigo
+getRegionDem(dem.location = "./data/vmelev_dem10m_ESRI_grid_GDA94_VicGrid/vmelev_dem10m_ESRI_grid_GDA94_Vicgrid/vmelev_dem10m/dem10m/hdr.adf",
+             region.location = "./data/greater_bendigo.sqlite", regionBufferDist = 10000,
+             output.filename = "dem_bendigo", outputCrs = "EPSG:7899")
+
+# Melbourne
+getRegionDem(dem.location = "./data/vmelev_dem10m_ESRI_grid_GDA94_VicGrid/vmelev_dem10m_ESRI_grid_GDA94_Vicgrid/vmelev_dem10m/dem10m/hdr.adf",
+             region.location = "./data/greater_melbourne.sqlite", regionBufferDist = 10000,
+             output.filename = "dem_melbourne", outputCrs = "EPSG:7899")
+
