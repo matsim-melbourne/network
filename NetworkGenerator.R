@@ -32,7 +32,7 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
     osmGpkg = "./output/bendigo_osm.gpkg"
     unconfiguredSqlite = "./output/bendigo_network_unconfigured.sqlite"
     cropAreaPoly = ""  # must set 'crop2Area=F'
-    # demFile = "./data/5m_DEM_reprojected.tif" # MIGHT NOT BE FINAL FILE
+    demFile = "./data/dem_bendigo.tif" 
     # ndviFile = ""  # must set 'addNDVI=F'
     gtfs_feed = "./data/gtfs.zip"
     
@@ -42,7 +42,7 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
     osmGpkg = "./output/melbourne_osm.gpkg"
     unconfiguredSqlite = "./output/melbourne_network_unconfigured.sqlite"
     cropAreaPoly = "city-of-melbourne_victoria"
-    # demFile = "./data/DEM_melbourne.tif"
+    demFile = "./data/dem_melbourne.tif"
     # ndviFile = "./data/NDVI_1600mBuffer_Melbourne_reprojected.tif"
     gtfs_feed = "./data/gtfs.zip"
 
@@ -80,7 +80,7 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
 
   # ELEVATION
   # A flag for whether to add elevation or not
-  addElevation=F
+  addElevation=T
   ElevationMultiplier=1
   
   # DESTINATIONS
