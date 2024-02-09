@@ -70,7 +70,13 @@ exportShp <- function(networkFinal, outputDir, outputCrs){
            driver = "ESRI Shapefile", layer_options = 'GEOMETRY=AS_XY', 
            delete_layer = T)
   if (length(networkFinal) > 2) {
-    st_write(networkFinal[[3]], paste0(shpDir,'/destinations.shp'),
+    message("When writing destinations to shapefile, long 'other_tags' may be truncated; consider using sqlite instead.")
+    dest.pt <- st_collection_extract(networkFinal[[3]], type = "POINT")
+    dest.poly <- st_collection_extract(networkFinal[[3]], type = "POLYGON")
+    st_write(dest.pt, paste0(shpDir,'/destinations_point.shp'),
+             driver = "ESRI Shapefile", layer_options = 'GEOMETRY=AS_XY', 
+             delete_layer = T)
+    st_write(dest.poly, paste0(shpDir,'/destinations_polygon.shp'),
              driver = "ESRI Shapefile", layer_options = 'GEOMETRY=AS_XY', 
              delete_layer = T)
   }

@@ -9,6 +9,8 @@ getPTStops <- function(city, gtfs_feed, outputCrs, region, regionBufferDist) {
   # region = "../data/processed/greater_melbourne.sqlite"
   # regionBufferDist = 10000
   
+  echo("Reading in GTFS data to find public transport stop locations\n")
+  
   # read in GTFS feed
   gtfs <- read_gtfs(gtfs_feed) %>%
     gtfs_as_sf(., crs = 4326)
@@ -41,7 +43,7 @@ getPTStops <- function(city, gtfs_feed, outputCrs, region, regionBufferDist) {
   } else if (!all(route_types %in% c("0", "1", "2", "3", "4", "5", "6", "7", "11", "12"))) {
     message("GTFS Feed contains the following route type codes: ", paste(route_types, collapse = ", "), ". Unable to process these using 
 the standard route codes from https://developers.google.com/transit/gtfs/reference, which are:
-   0-tram, 1-metro, 2-train, 3-bus, 4-ferry, 5-cable tram, 6-cable car, 7-funicular, 11-trolleybus, 12 monorail. 
+   0-tram, 1-metro, 2-train, 3-bus, 4-ferry, 5-cable tram, 6-cable car, 7-funicular, 11-trolleybus, 12-monorail. 
 Edit getPTStops.R to specify the meanings of the codes used in the GTFS Feed.
 PT stops will not be included in destinations.")
     stops.found = FALSE
@@ -49,7 +51,7 @@ PT stops will not be included in destinations.")
   } else {
     message("GTFS Feed contains the following route type codes: ", paste(route_types, collapse = ", "), ".
 Using standard route_type codes from https://developers.google.com/transit/gtfs/reference:
-   0-tram, 1-metro, 2-train, 3-bus, 4-ferry, 5-cable tram, 6-cable car, 7-funicular, 11-trolleybus, 12 monorail. 
+   0-tram, 1-metro, 2-train, 3-bus, 4-ferry, 5-cable tram, 6-cable car, 7-funicular, 11-trolleybus, 12-monorail. 
 Adjust 'getPTStops' function if these don't match the codes used in your GTFS feed.")
     stops.routetypes.coded <- stops.routetypes %>%
       mutate(pt_stop_type = case_when(
