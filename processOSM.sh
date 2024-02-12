@@ -47,22 +47,6 @@ ogr2ogr -update -overwrite -nln roads_points -f "SQLite" -dsco SPATIALITE=YES \
     WHERE highway LIKE '%traffic_signals%' " \
   ./data/temp.sqlite $extract
 
-# extract the train and tram lines and add to temp.sqlite
-# apparently there are miniature railways
-ogr2ogr -update -overwrite -nln pt -f "SQLite" -dialect SQLite -sql \
-  "SELECT CAST(osm_id AS DOUBLE PRECISION) AS osm_id, highway, other_tags, \
-    GEOMETRY FROM lines \
-    WHERE other_tags LIKE '%railway%' AND \
-      other_tags NOT LIKE '%busbar%' AND \
-      other_tags NOT LIKE '%abandoned%' AND \
-      other_tags NOT LIKE '%miniature%' AND \
-      other_tags NOT LIKE '%proposed%' AND \
-      other_tags NOT LIKE '%disused%' AND \
-      other_tags NOT LIKE '%preserved%' AND \
-      other_tags NOT LIKE '%construction%' AND \
-      other_tags NOT LIKE '%\"service\"=>\"yard\"%'" \
-  ./data/temp.sqlite $extract
-
 # the postgres database name.
 DB_NAME="network_test"
 
