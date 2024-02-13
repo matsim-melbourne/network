@@ -65,7 +65,7 @@ restructureData <- function(networkList, highway_lookup,
     mutate(cycleway=ifelse(cycleway==2, "simple_lane"   , cycleway)) %>%
     mutate(cycleway=ifelse(cycleway==1, "shared_street" , cycleway)) %>%
     mutate(cycleway=ifelse(cycleway==0, NA              , cycleway)) %>%
-    dplyr::select(any_of(c("from_id", "to_id", "fromX", "fromY", "toX", "toY",  
+    dplyr::select(any_of(c("osm_id","from_id", "to_id", "fromX", "fromY", "toX", "toY",  
                            "length", "freespeed", "permlanes", "capacity",  
                            "highway", "is_oneway", "cycleway", "surface",
                            "is_cycle", "is_walk", "is_car", "modes", "ndvi"))) %>%
