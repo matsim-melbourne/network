@@ -327,14 +327,14 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
   # Adjust your analysis start date, end data and gtfs feed name above
   if(addGtfs) {
     # Adjust these parameters based on your GTFS file
-    if(file.exists("data/studyRegion.sqlite")){
+    if(file.exists(region)){
       # read in the study region boundary 
-      echo("Using Study Region file for GTFS processing")
-      studyRegion <- st_read("data/studyRegion.sqlite",quiet=T) %>%
-        st_buffer(10000) %>%
+      echo("Using Region file for GTFS processing")
+      studyRegion <- st_read(region, quiet=T) %>%
+        st_buffer(regionBufferDist) %>%
         st_snap_to_grid(1)
     }else{
-      echo("Study Region file was not found, skipping")
+      echo("Region file was not found, skipping")
       studyRegion = NA
     }
     system.time(
