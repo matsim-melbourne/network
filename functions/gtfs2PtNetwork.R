@@ -74,6 +74,12 @@ processGtfs <- function(outputLocation="./test/",
   
   gtfs <- read_gtfs(gtfs_feed)
   
+  # if calendar uses integers for dates, convert start and end (eg 2023-11-13 to 20231113)
+  if (typeof(gtfs$calendar$start_date) == "integer") {
+    analysis_start <- as.integer(gsub("-", "", analysis_start))
+    analysis_end <- as.integer(gsub("-", "", analysis_end))
+  }
+  
   validCalendar <- gtfs$calendar %>%
     filter(start_date<=analysis_end & end_date>=analysis_start) %>%
     filter(wednesday==1)
@@ -541,3 +547,4 @@ exportGtfsSchedule <- function(links,
     mutate(cycleway=as.character(cycleway))
   
   return(edgesCombined)
+}
