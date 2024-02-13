@@ -12,7 +12,7 @@ addGtfsLinks <- function(outputLocation,
   # gtfs_feed = "./data/gtfs.zip"
   # analysis_start = as.Date("2023-11-13","%Y-%m-%d")
   # analysis_end = as.Date("2023-11-19","%Y-%m-%d")
-  # studyRegion=st_read(region)
+  # studyRegion=st_read(region, quiet=T) %>% st_buffer(regionBufferDist) %>% st_snap_to_grid(1)
   
   validRoadEdges <- links %>%
     st_drop_geometry() %>%
