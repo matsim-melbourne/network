@@ -113,10 +113,14 @@ processGtfs <- function(outputLocation="./test/",
       mutate(trip_id=as.factor(trip_id),
              stop_id=as.factor(stop_id)) %>%
       filter(trip_id %in% validTrips$trip_id) %>%
-      mutate(arrival_time=as.numeric(as_hms(arrival_time)),
-             departure_time=as.numeric(as_hms(departure_time))) %>%
+      # arrival and departure times as no. of seconds (keeping even those over 24 hours)
+      mutate(arrival_time = as.numeric(str_sub(arrival_time, 1, 2)) * 60 * 60 +
+               as.numeric(str_sub(arrival_time, 4, 5)) * 60 +
+               as.numeric(str_sub(arrival_time, 7, 8)),
+             departure_time = as.numeric(str_sub(departure_time, 1, 2)) * 60 * 60 +
+               as.numeric(str_sub(departure_time, 4, 5)) * 60 +
+               as.numeric(str_sub(departure_time, 7, 8))) %>%
       dplyr::select(trip_id,arrival_time,departure_time,stop_id,stop_sequence) %>%
-      filter(!is.na(arrival_time)) %>% # some of the schedule goes past 24 hours
       arrange(trip_id,stop_sequence)
   )
   
