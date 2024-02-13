@@ -167,8 +167,8 @@ processGtfs <- function(outputLocation="./test/",
     inner_join(st_drop_geometry(validStopsSnapped),by="stop_id") %>% # IMPORTANT: this join also removes the stops outside of the region!
     arrange(trip_id,stop_sequence) %>%
     group_by(trip_id) %>%
-    # we want at least 3 stops for each trip
-    filter(n()>=3) %>%
+    # we want at least 2 stops for each trip
+    filter(n() >= 2) %>%
     # when we use the snapped locations, two sequential stops may be at the same
     # location. If this is the case, we remove the later stop.
     # mutate(bad=ifelse(id==lag(id) & row_number()>1,T,F)) %>%
