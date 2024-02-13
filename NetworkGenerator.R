@@ -97,9 +97,10 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
   ndviBuffDist=30
 
   # GTFS
-  addGtfs=F
-  analysis_start = as.Date("2019-10-11","%Y-%m-%d") # Transit Feed start date
-  analysis_end = as.Date("2019-10-17","%Y-%m-%d") # Transit Feed end date
+  addGtfs=T
+  # analysis period is a week [why?  gtfs2PtNetwork.R just takes a Wednesday anyway]
+  analysis_start = as.Date("2023-11-13","%Y-%m-%d") # analysis period start date
+  analysis_end = as.Date("2023-11-19","%Y-%m-%d") # analysis end date
 
   # Outputs
   # outputSubdirectory=format(Sys.time(),"%d%b%y_%H%M") # date_hour, eg. "17Aug21_1308"
