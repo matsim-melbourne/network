@@ -96,9 +96,8 @@ processGtfs <- function(outputLocation="./test/",
     mutate(service_type="null",
            service_type=ifelse(agency_id%in%c(3)   & route_type%in%c(0),  "tram" ,service_type),
            service_type=ifelse(agency_id%in%c(1,2) & route_type%in%c(1,2),"train",service_type),
-           # CONSIDER THE LINE BELOW - omitting 5, which is VLINE BUS
-           service_type=ifelse(agency_id%in%c(4,6) & route_type%in%c(3),  "bus"  ,service_type)) %>%
-    filter(service_type!="null") %>%
+           service_type=ifelse(agency_id%in%c(4,5,6) & route_type%in%c(3),  "bus"  ,service_type)) %>%
+    filter(service_type!="null") %>%  # eg skybus
     mutate(route_id=as.factor(route_id)) %>%
     mutate(service_type=as.factor(service_type)) %>%
     dplyr::select(route_id,service_type)
