@@ -134,7 +134,7 @@ processGtfs <- function(outputLocation="./test/",
     st_snap_to_grid(1)
   
   # only want stops within the study region
-  if(!is.na(studyRegion)){
+  if(!is.na(studyRegion) && length(studyRegion) > 0){
     message("Cropping to study region")
     validStops <- validStops %>%
       filter(lengths(st_intersects(., studyRegion)) > 0)
