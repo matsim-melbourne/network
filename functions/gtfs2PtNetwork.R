@@ -1,18 +1,18 @@
-addGtfsLinks <- function(outputLocation="./test/",
+addGtfsLinks <- function(outputLocation,
                          nodes, 
                          links,
-                         gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip", 
-                         analysis_start = as.Date("2019-10-11","%Y-%m-%d"), 
-                         analysis_end = as.Date("2019-10-17","%Y-%m-%d"),
+                         gtfs_feed, 
+                         analysis_start, 
+                         analysis_end,
                          studyRegion=NA,
-                         outputCrs=outputCrs){
-  # outputLocation="./gtfs/"
+                         outputCrs){
+  # outputLocation="./output/generated_network/gtfs/"
   # nodes=networkRestructured[[1]]
   # links=networkRestructured[[2]]
-  # gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip"
-  # analysis_start = as.Date("2019-10-11","%Y-%m-%d")
-  # analysis_end = as.Date("2019-10-17","%Y-%m-%d")
-  # studyRegion=greaterMelbourne
+  # gtfs_feed = "./data/gtfs.zip"
+  # analysis_start = as.Date("2023-11-13","%Y-%m-%d")
+  # analysis_end = as.Date("2023-11-19","%Y-%m-%d")
+  # studyRegion=st_read(region)
   
   validRoadEdges <- links %>%
     st_drop_geometry() %>%
@@ -25,10 +25,13 @@ addGtfsLinks <- function(outputLocation="./test/",
     st_set_crs(outputCrs)
   
   # process the GTFS feed and export relevant tables into a folder
-  processGtfs(outputLocation = outputLocation,
+  processGtfs(outputLocation,
               networkNodes = validRoadNodes,
-              studyRegion = studyRegion,
-              outputCrs = outputCrs)
+              gtfs_feed,
+              analysis_start,
+              analysis_end,
+              studyRegion,
+              outputCrs)
   # read the outputs
   stops <- st_read(paste0(outputLocation,"stops.sqlite"),quiet=T)
   stopTimes <- readRDS(paste0(outputLocation,"stopTimes.rds"))
@@ -37,9 +40,7 @@ addGtfsLinks <- function(outputLocation="./test/",
   stopTable <- readRDS(paste0(outputLocation, "stopTable.rds"))
   
   # We run into trouble if the geometry column is 'geom' instead of 'GEOMETRY'
-  if('GEOMETRY'%in%colnames(stops)) {
-    stops<-stops%>%rename(geom=GEOMETRY)
-  }
+  stops <- stops %>% st_set_geometry("geom")
   
   # return the edges in the PT network as well as write the
   # transitVehicles.xml and transitSchedule.xml files
@@ -58,16 +59,16 @@ addGtfsLinks <- function(outputLocation="./test/",
 
 processGtfs <- function(outputLocation="./test/",
                         networkNodes,
-                        gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip", 
-                        analysis_start = as.Date("2019-10-11","%Y-%m-%d"), 
-                        analysis_end = as.Date("2019-10-17","%Y-%m-%d"),
+                        gtfs_feed, 
+                        analysis_start, 
+                        analysis_end,
                         studyRegion=NA,
                         outputCrs){
-  # outputLocation="./gtfs/"
+  # outputLocation="./output/generated_network/gtfs/"
   # networkNodes = validRoadNodes
-  # gtfs_feed = "data/gtfs_au_vic_ptv_20191004.zip"
-  # analysis_start = as.Date("2019-10-11","%Y-%m-%d")
-  # analysis_end = as.Date("2019-10-17","%Y-%m-%d")
+  # gtfs_feed = "./data/gtfs.zip"
+  # analysis_start = as.Date("2023-11-13","%Y-%m-%d")
+  # analysis_end = as.Date("2023-11-19","%Y-%m-%d")
   
   #dir.create(outputLocation, showWarnings = FALSE)
   
@@ -89,6 +90,7 @@ processGtfs <- function(outputLocation="./test/",
     mutate(service_type="null",
            service_type=ifelse(agency_id%in%c(3)   & route_type%in%c(0),  "tram" ,service_type),
            service_type=ifelse(agency_id%in%c(1,2) & route_type%in%c(1,2),"train",service_type),
+           # CONSIDER THE LINE BELOW - omitting 5, which is VLINE BUS
            service_type=ifelse(agency_id%in%c(4,6) & route_type%in%c(3),  "bus"  ,service_type)) %>%
     filter(service_type!="null") %>%
     mutate(route_id=as.factor(route_id)) %>%
@@ -359,7 +361,7 @@ exportGtfsSchedule <- function(links,
                   departureTime=departure_time,vehicleRefId,type) %>%
     as.data.frame()
   
-  # Types of vehicles to place in the network
+  # Types of vehicles to place in the network - TO BE REVIEWED
   vehicleTypes <- tribble(
     ~id, ~service_type, ~seats, ~standingRoom, ~length, ~accessTime, ~egressTime, ~passengerCarEquivalents,
     1  , "train"      , 114   , 206          , 150    , "0.0"      , "0.0"      , 0.25                    ,
@@ -440,8 +442,7 @@ exportGtfsSchedule <- function(links,
   
   transitRoutes<-routeProfile$transitRouteId%>%unique()%>%sort()
   
-  # TODO Ask @Alan to check this part:
-  for (i in 1:length(transitRoutes)) {
+ for (i in 1:length(transitRoutes)) {
     # for (i in 1:100) {
     routeProfileCurrent <- routeProfile[routeProfile$transitRouteId==transitRoutes[i],]
     departuresCurrent <- departures[departures$transitRouteId==transitRoutes[i],]
@@ -540,4 +541,3 @@ exportGtfsSchedule <- function(links,
     mutate(cycleway=as.character(cycleway))
   
   return(edgesCombined)
-}
