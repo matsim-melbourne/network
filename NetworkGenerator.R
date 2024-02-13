@@ -51,11 +51,14 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
     return()
   }
 
+  # REGION BUFFER DISTANCE
+  # Distance to buffer region when getting osm extract, destinations or gtfs routes
+  regionBufferDist=10000
+  
   # DOWNLOAD OSM EXTRACT
   # A flag for whether to download osm extract for the region (if not, and if
   # network needs to be processed, then must already have osmGpkg file)
   downloadOsm=T
-  regionBufferDist=10000  # Distance to buffer region when getting osm extract
   retainDownload=F  # Whether to retain downloaded file after region extracted
   
   # NETWORK FROM OSM 
