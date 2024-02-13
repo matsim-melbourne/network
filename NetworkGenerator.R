@@ -329,12 +329,12 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
     # Adjust these parameters based on your GTFS file
     if(file.exists(region)){
       # read in the study region boundary 
-      echo("Using Region file for GTFS processing")
+      echo("Using Region file for GTFS processing\n")
       studyRegion <- st_read(region, quiet=T) %>%
         st_buffer(regionBufferDist) %>%
         st_snap_to_grid(1)
     }else{
-      echo("Region file was not found, skipping")
+      echo("Region file was not found, skipping\n")
       studyRegion = NA
     }
     system.time(
