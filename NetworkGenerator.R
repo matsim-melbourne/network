@@ -97,10 +97,11 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
   ndviBuffDist=30
 
   # GTFS
+  # A flag for whether to add a network based on GTFS or not
   addGtfs=T
-  # analysis period is a week [why?  gtfs2PtNetwork.R just takes a Wednesday anyway]
-  analysis_start = as.Date("2023-11-13","%Y-%m-%d") # analysis period start date
-  analysis_end = as.Date("2023-11-19","%Y-%m-%d") # analysis end date
+  # Select an analysis date, eg a midweek day that's not a public or school holiday
+  analysis_date=as.Date("2023-11-15","%Y-%m-%d")
+  onroadBus=T  # whether to route buses on roads (rather than create separate pseudo links)
 
   # Outputs
   # outputSubdirectory=format(Sys.time(),"%d%b%y_%H%M") # date_hour, eg. "17Aug21_1308"
@@ -129,7 +130,7 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
   library(parallel)
   library(foreach)
   library(nngeo)
-  
+  library(igraph)
 
   # Building the output folder structure ------------------------------------
   outputDir <- paste0("output/",outputSubdirectory)
@@ -323,36 +324,37 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
     networkRestructured[[2]] <- addElevation2Links(networkRestructured)
   }
   
-  # Adding PT pseudo-network based on GTFS
-  # Adjust your analysis start date, end data and gtfs feed name above
-  if(addGtfs) {
-    # Adjust these parameters based on your GTFS file
-    if(file.exists(region)){
-      # read in the study region boundary 
-      echo("Using Region file for GTFS processing\n")
-      studyRegion <- st_read(region, quiet=T) %>%
-        st_buffer(regionBufferDist) %>%
-        st_snap_to_grid(1)
-    }else{
-      echo("Region file was not found, skipping\n")
-      studyRegion = NA
-    }
-    system.time(
-      networkRestructured[[2]] <- addGtfsLinks(outputLocation=paste0(outputDir,"/gtfs/"),
-                                               nodes=networkRestructured[[1]], 
-                                               links=networkRestructured[[2]],
-                                               gtfs_feed=gtfs_feed,
-                                               analysis_start= analysis_start,
-                                               analysis_end=analysis_end,
-                                               studyRegion=studyRegion,
-                                               outputCrs=outputCrs)) 
-  }
-  
   # Make network oneway (required because cycling impedances such as level of 
   # traffic stress and slope may be different in each direction)
   echo("Making all links one way\n")
   networkOneway <- makeEdgesOneway(networkRestructured[[1]], 
                                    networkRestructured[[2]])
+  
+  # Adding PT pseudo-network based on GTFS
+  # Adjust your analysis date and gtfs feed name above
+  if (addGtfs) {
+    # Adjust these parameters based on your GTFS file
+    if (file.exists(region)) {
+      # read in the study region boundary 
+      echo("Using Region file for GTFS processing\n")
+      studyRegion <- st_read(region, quiet=T) %>%
+        st_buffer(regionBufferDist) %>%
+        st_snap_to_grid(1)
+    } else {
+      echo("Region file was not found, skipping\n")
+      studyRegion = NA
+    }
+    system.time(
+      networkOneway[[2]] <- addGtfsLinks(outputLocation = paste0(outputDir,"/gtfs/"),
+                                         nodes = networkOneway[[1]], 
+                                         links = networkOneway[[2]],
+                                         gtfs_feed,
+                                         analysis_date,
+                                         studyRegion,
+                                         outputCrs,
+                                         onroadBus,
+                                         city)) 
+  }
   
   networkFinal <- networkOneway
   
