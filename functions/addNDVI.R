@@ -1,17 +1,18 @@
 # function to add NDVI to links, where NDVI is the average of the NDVI
 # values within a 30m buffer of the links
 
-addNDVI2Links <- function(links, ndviFile, ndviBuffDist) {
+addNDVI2Links <- function(links, ndviFile, ndviBuffDist, outputCrs) {
   
   # links = networkDensified[[2]]
-  # ndviFile = "./data/NDVI_1600mBuffer_Melbourne_reprojected.tif"
+  # ndviFile = "./data/NDVI_Bendigo_2023.tif"
   # ndviBuffDist = 30
   
-  echo("Reading in the NDVI file\n")
+  echo("Reading in the NDVI file and reprojecting if necessary\n")
   
-  # read in NDVI file
+  # read in NDVI file, and convert to outputCrs if necessary
   ndvi <- rast(ndviFile)
-  
+  if (!same.crs(ndvi, outputCrs)) ndvi <- project(ndvi, outputCrs)
+ 
   # buffer each link
   links.buffered <- st_buffer(links, 30)
   

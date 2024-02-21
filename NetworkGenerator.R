@@ -21,8 +21,7 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
   #   (only supported for Victoria at this stage)
   # •	demFile: if 'addElevation=T', digital elevation model raster file (must be 
   #   in same coordinate system as network)
-  # •	ndviFile: if 'addNDVI=T', raster file with NDVI values (must be in same
-  #   coordinate system as network)
+  # •	ndviFile: if 'addNDVI=T', raster file with NDVI values
   # •	gtfs_feed: if 'addGtfs=T' or 'addDestinationLayer=T, zip file containing 
   #   GTFS data (and, if 'addGtfs=T', also set start and end dates in GTFS section)
 
@@ -33,7 +32,7 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
     unconfiguredSqlite = "./output/bendigo_network_unconfigured.sqlite"
     cropAreaPoly = ""  # must set 'crop2Area=F'
     demFile = "./data/dem_bendigo.tif" 
-    # ndviFile = ""  # must set 'addNDVI=F'
+    ndviFile = "./data/NDVI_Bendigo_2023.tif" 
     gtfs_feed = "./data/gtfs.zip"
     
   } else if (city == "Melbourne") {
@@ -43,7 +42,7 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
     unconfiguredSqlite = "./output/melbourne_network_unconfigured.sqlite"
     cropAreaPoly = "city-of-melbourne_victoria"
     demFile = "./data/dem_melbourne.tif"
-    # ndviFile = "./data/NDVI_1600mBuffer_Melbourne_reprojected.tif"
+    ndviFile = "./data/NDVI_Melbourne_2023.tif"
     gtfs_feed = "./data/gtfs.zip"
 
   } else {
@@ -92,7 +91,7 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
 
   # NDVI
   # A flag for whether to add NDVI or not
-  addNDVI=F
+  addNDVI=T
   # Buffer distance for finding average NDVI for links
   ndviBuffDist=30
 
@@ -284,7 +283,8 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
   if(addNDVI) {
     system.time(networkDensified[[2]] <- addNDVI2Links(networkDensified[[2]],
                                                        ndviFile,
-                                                       ndviBuffDist))
+                                                       ndviBuffDist,
+                                                       outputCrs))
   }
   
   # adding destinations layer
