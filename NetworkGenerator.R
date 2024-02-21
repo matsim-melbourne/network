@@ -23,7 +23,7 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
   #   in same coordinate system as network)
   # •	ndviFile: if 'addNDVI=T', raster file with NDVI values
   # •	gtfs_feed: if 'addGtfs=T' or 'addDestinationLayer=T, zip file containing 
-  #   GTFS data (and, if 'addGtfs=T', also set start and end dates in GTFS section)
+  #   GTFS data (and, if 'addGtfs=T', also set analysis date in GTFS section)
 
   if (city == "Bendigo") {
     region = "./data/greater_bendigo.sqlite"
