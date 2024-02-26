@@ -118,7 +118,6 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
   library(tidyverse)
   library(data.table)
   library(igraph)
-  library(raster)
   library(terra)
   library(lwgeom)
   library(tidytransit)
@@ -320,7 +319,8 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
   if(addElevation){ 
     networkRestructured[[1]] <- addElevation2Nodes(networkRestructured[[1]], 
                                                    demFile,
-                                                   ElevationMultiplier)
+                                                   ElevationMultiplier,
+                                                   outputCrs)
     networkRestructured[[2]] <- addElevation2Links(networkRestructured)
   }
   
