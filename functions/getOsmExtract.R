@@ -17,7 +17,7 @@ getOsmExtract <- function(region,
  
   # increase timeout to allow time for large Australia extract to download
   default.timeout <- getOption("timeout")
-  options(timeout = 1200)
+  options(timeout = 3600)
   
   # download the full extract (whole of Australia; quite slow)
   download.url <- oe_match(region, crs = outputCrs)$url
