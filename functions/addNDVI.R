@@ -11,7 +11,8 @@ addNDVI2Links <- function(links, ndviFile, ndviBuffDist, outputCrs) {
   
   # read in NDVI file, and convert to outputCrs if necessary
   ndvi <- rast(ndviFile)
-  if (!same.crs(ndvi, outputCrs)) ndvi <- project(ndvi, outputCrs)
+  outputCrsEPSG <- paste0("EPSG:", outputCrs)
+  if (!same.crs(ndvi, outputCrsEPSG)) ndvi <- project(ndvi, outputCrsEPSG)
  
   # buffer each link
   links.buffered <- st_buffer(links, 30)
@@ -22,7 +23,7 @@ addNDVI2Links <- function(links, ndviFile, ndviBuffDist, outputCrs) {
   # 2 columns, ID (which is the row number from links.buffered) and NDVI
   ndvi_values <- terra::extract(ndvi, links.buffered)
   
-  echo(paste("Finding mean pf NDVI values for each link\n"))
+  echo(paste("Finding mean of NDVI values for each link\n"))
   
   # find the mean of the values for each link
   ndvi_values_mean <- ndvi_values %>%
