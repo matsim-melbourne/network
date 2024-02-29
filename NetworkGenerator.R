@@ -19,8 +19,7 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
   # •	cropAreaPoly: if 'crop2TestArea=T' cropArea location from 
   #   https://github.com/JamesChevalier/cities/tree/master/australia/victoria 
   #   (only supported for Victoria at this stage)
-  # •	demFile: if 'addElevation=T', digital elevation model raster file (must be 
-  #   in same coordinate system as network)
+  # •	demFile: if 'addElevation=T', digital elevation model raster file
   # •	ndviFile: if 'addNDVI=T', raster file with NDVI values
   # •	gtfs_feed: if 'addGtfs=T' or 'addDestinationLayer=T, zip file containing 
   #   GTFS data (and, if 'addGtfs=T', also set analysis date in GTFS section)
