@@ -344,7 +344,7 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
       studyRegion = NA
     }
     system.time(
-      networkOneway[[2]] <- addGtfsLinks(outputLocation = paste0(outputDir,"/gtfs/"),
+      networkOneway[[2]] <- addGtfsLinks(outputLocation = paste0(outputDir,"/pt/"),
                                          nodes = networkOneway[[1]], 
                                          links = networkOneway[[2]],
                                          gtfs_feed,

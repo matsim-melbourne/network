@@ -8,7 +8,7 @@ addGtfsLinks <- function(outputLocation,
                          onroadBus,
                          city){
   
-  # outputLocation = "./output/generated_network/gtfs/"
+  # outputLocation = "./output/generated_network/pt/"
   # nodes = networkOneway[[1]]
   # links = networkOneway[[2]]
   # gtfs_feed = "./data/gtfs.zip"
@@ -67,7 +67,7 @@ addGtfsLinks <- function(outputLocation,
   return(edgesCombined)
 }
 
-processGtfs <- function(outputLocation = "./output/generated_network/gtfs/",
+processGtfs <- function(outputLocation = "./output/generated_network/pt/",
                         nodes,
                         links,
                         networkNodes,
@@ -77,7 +77,7 @@ processGtfs <- function(outputLocation = "./output/generated_network/gtfs/",
                         outputCrs,
                         onroadBus){
   
-  # outputLocation ="./output/generated_network/gtfs/"
+  # outputLocation ="./output/generated_network/pt/"
   # networkNodes = validRoadNodes
   # gtfs_feed = "./data/gtfs.zip"
   # analysis_date = as.Date("2023-11-15","%Y-%m-%d")
