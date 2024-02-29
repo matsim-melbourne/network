@@ -350,7 +350,6 @@ exportGtfsSchedule <- function(links,
     saveRDS(nodePairRoutes, file=paste0(outputLocation,"nodePairRoutes.rds"))
   }
   
-  ### Done to here for both Melbourne and Bendigo
   # the public transport network
   ptNetwork <- stopTimes %>%
     dplyr::select(trip_id,arrival_time,departure_time,from_id=stop_id,from_x=x,from_y=y, trip_id_orig, service_type) %>%
