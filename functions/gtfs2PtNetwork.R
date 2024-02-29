@@ -17,6 +17,8 @@ addGtfsLinks <- function(outputLocation,
   # outputCrs = 7899
   # onroadBus = T
   
+  dir_create(outputLocation)
+  
   validRoadEdges <- links %>%
     st_drop_geometry() %>%
     filter(is_walk==1 & is_car==1 & is_cycle==1) %>%

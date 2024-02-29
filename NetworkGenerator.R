@@ -134,7 +134,7 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
   if(outputSubdirectory != "" & dir.exists(outputDir)) dir_delete(outputDir)
   dir_create(paste0('./',outputDir))
   sink(paste0('./',outputDir,'/makeMatsimNetwork.log'), append=FALSE, split=TRUE)
-  if (addGtfs) dir_create(paste0(outputDir,"/gtfs"))
+  # if (addGtfs) dir_create(paste0(outputDir,"/gtfs"))
 
   #  Functions --------------------------------------------------------------
 
