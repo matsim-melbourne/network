@@ -416,28 +416,30 @@ exportGtfsSchedule <- function(links,
     mutate(stop_id = paste0(service_type, "_", from_id, "_", to_id))
 
   # add edges to network
-  # link_id naming convention: for pseudo links: link_id is in the form 'x_y', 
-  # where 'x' is the node of the from_stop, and 'y' is the node of the to_stop 
-  # (and for the last stop, x and y are the same); for on-road links, it's the 
-  # first link in the chain of links between the stops
+  # link_id naming convention: for pseudo links: link_id the service type (eg 'train_');
+  # plus a row number; for on-road links, it's the first link in the chain of links between the stops
   if (onroadBusRouting) {
     ptNetwork_StopsAndEdges <- ptNetwork_Stops %>%
       # join the chains of links ('link_ids') between pairs of nodes
       left_join(nodePairRoutes, 
                 by = c("from_id" = "stop_id", "to_id" = "next_stop_id")) %>%
-      # remove any link_ids that aren't bus routes (eg when train and bus both run between same pair)
+      # remove any chains that aren't bus routes (eg when train and bus both run between same pair)
       mutate(link_ids = ifelse(service_type != "bus", NA, link_ids)) %>%
-      # link id is the first link in the chain of link_ids
+      # link id: service type plus an identifying number
+      mutate(link_id = paste0(service_type, "_",
+                              formatC(row_number(), digits=0, width=5, flag="0", format="d"))) %>%
+      # update link id for buses: first link in the chain
       rowwise() %>%
-      mutate(link_id = case_when(
-        service_type == "bus" & from_id != to_id ~ unlist(str_split(link_ids, ", "))[1],
-        TRUE ~ paste0(from_id, "_", to_id)
-      )) %>%
+      mutate(link_id = if_else(service_type == "bus" & from_id != to_id, 
+                               unlist(str_split(link_ids, ", "))[1],
+                               link_id)) %>%
       ungroup()
-   } else {
+  } else {
     ptNetwork_StopsAndEdges <- ptNetwork_Stops %>%
-      mutate(link_id = paste0(from_id, "_", to_id))
-   }
+      # link id - service type plus an identifying number
+      mutate(link_id = paste0(service_type, "_",
+                              formatC(row_number(), digits=0, width=5, flag="0", format="d")))
+  }
   
   ptNetworkRoutes <- ptNetwork %>%
     inner_join(ptNetworkDepartures%>%group_by(route_id_new)%>%
@@ -674,7 +676,7 @@ exportGtfsSchedule <- function(links,
   cat(paste0("  </transitLine>\n"),file=outxml,append=TRUE)
   cat(paste0("</transitSchedule>\n"),file=outxml,append=TRUE)
   
-  # edges to be added to road network
+  # edges to be added to road network 
   if (onroadBusRouting) {
     ptBaseEdges <- ptNetwork_StopsAndEdges %>%
       # remove bus segments where onroad links are used (that is, where link_ids are present)
@@ -682,6 +684,7 @@ exportGtfsSchedule <- function(links,
   } else {
     ptBaseEdges <- ptNetwork_StopsAndEdges
   }
+  
   ptNetworkMATSim <- ptBaseEdges %>% 
     mutate(length=round(as.numeric(st_length(.)),3)) %>%
     mutate(length=ifelse(length<1,1,length)) %>%
@@ -697,10 +700,11 @@ exportGtfsSchedule <- function(links,
     mutate(is_walk=0) %>% 
     mutate(is_car=0) %>% 
     mutate(modes=service_type) %>%
-    mutate(link_id = max(links$link_id) + row_number()) %>%
+    mutate(id = link_id) %>%  # the link_id created above
+    mutate(link_id = max(links$link_id) + row_number()) %>%  # row-number link_id, consistent with road links
     dplyr::select(from_id, to_id, fromx=from_x, fromy=from_y, tox=to_x, toy=to_y,
                   length, freespeed, permlanes, capacity, highway, cycleway, 
-                  surface, is_cycle, is_walk, is_car, modes, slope_pct, link_id)
+                  surface, is_cycle, is_walk, is_car, modes, slope_pct, link_id, id)
   
   edgesCombined <- bind_rows(links,ptNetworkMATSim) %>%
     st_sf()

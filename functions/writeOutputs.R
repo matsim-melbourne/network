@@ -207,7 +207,12 @@ exportXML <- function(networkFinal, outputDir){
   links <-  fncols(links, c("id","osm_id", "highway", "cycleway","slope", 
                             "bicycleInfrastructureSpeedFactor")) 
   links <- links %>%
-    mutate(id = ifelse(is.na(id),row_number(),id)) %>% 
+    # mutate(id = ifelse(is.na(id),row_number(),id)) %>%
+    mutate(id = case_when(
+      is.na(id) & "link_id" %in% names(links) ~ as.character(link_id),
+      is.na(id) ~ as.character(row_number()),
+      TRUE ~ as.character(id))
+    ) %>%
     mutate(type = replace(highway, is.na(highway), "NotSpecified")) %>% 
     mutate(surface = ifelse(is.na(surface),"asphalt",surface)) %>% 
     mutate(cycleway = replace(cycleway, is.na(cycleway),"No")) %>% 
