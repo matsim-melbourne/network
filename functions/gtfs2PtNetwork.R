@@ -27,28 +27,24 @@ addGtfsLinks <- function(outputLocation,
     filter(id %in% validRoadIds) %>%
     st_set_crs(outputCrs)
   
-  # process the GTFS feed and export relevant tables into a folder
-  processGtfs(outputLocation,
-              nodes,
-              links,
-              networkNodes = validRoadNodes,
-              gtfs_feed,
-              analysis_date,
-              studyRegion,
-              outputCrs,
-              onroadBus)
+  # process the GTFS feed
+  processedGtfs <- processGtfs(outputLocation,
+                               nodes,
+                               links,
+                               networkNodes = validRoadNodes,
+                               gtfs_feed,
+                               analysis_date,
+                               studyRegion,
+                               outputCrs,
+                               onroadBus)
   
-  # read the outputs
-  stops <- st_read(paste0(outputLocation,"stops.sqlite"),quiet=T)
-  stopTimes <- readRDS(paste0(outputLocation,"stopTimes.rds"))
-  trips <- readRDS(paste0(outputLocation,"trips.rds"))
-  routes <- readRDS(paste0(outputLocation,"routes.rds"))
-  stopTable <- readRDS(paste0(outputLocation, "stopTable.rds"))
-  if (file.exists(paste0(outputLocation, "shape_links.rds"))) {
-    shape.links <- readRDS(paste0(outputLocation, "shape_links.rds"))
-  } else {
-    shape.links <- NA
-  }
+  # unpack the outputs
+  stops <- processedGtfs[[1]]
+  stopTimes <- processedGtfs[[2]]
+  trips <- processedGtfs[[3]]
+  routes <- processedGtfs[[4]]
+  stopTable <- processedGtfs[[5]]
+  shape.links <- processedGtfs[[6]]
   
   # We run into trouble if the geometry column is 'geom' instead of 'GEOMETRY'
   stops <- stops %>% st_set_geometry("geom")
@@ -187,8 +183,8 @@ processGtfs <- function(outputLocation = "./output/generated_network/gtfs/",
     shape.nodes <- shape.subnetwork[[1]]
     shape.links <- shape.subnetwork[[2]]
     
-    # write shape.links to file for use when finding routes
-    saveRDS(shape.links, file=paste0(outputLocation, "shape_links.rds"))
+    # # write shape.links to file for use when finding routes
+    # saveRDS(shape.links, file=paste0(outputLocation, "shape_links.rds"))
 
     # only shape.nodes are used for snapping bus stops
     networkNodesBus <- networkNodes %>%
@@ -198,10 +194,11 @@ processGtfs <- function(outputLocation = "./output/generated_network/gtfs/",
     
     if (onroadBus & !"shapes" %in% names(gtfs)) {
       message("No shapes file present in GTFS feed, so unable to convert shapes to routes; will make pseudo links for bus instead")
-    } 
+     } 
     
     # all nodes can be used for snapping bus stops
     networkNodesBus <- networkNodes
+    shape.links <- NA
   }
   
   # divide into bus and non-bus (but, if onroadBus = F, they will be processed the same way,
@@ -282,12 +279,13 @@ processGtfs <- function(outputLocation = "./output/generated_network/gtfs/",
     dplyr::select(-stop_id) %>%
     rename(stop_id=id)
   
-  # writing the exports to file
-  st_write(validStopsSnappedFinal,paste0(outputLocation,"stops.sqlite"),delete_layer=T)
-  saveRDS(validStopTimesSnappedFinal, file=paste0(outputLocation,"stopTimes.rds"))
-  saveRDS(validTripsSnapped, file=paste0(outputLocation,"trips.rds"))
-  saveRDS(validRoutesSnapped, file=paste0(outputLocation,"routes.rds"))
-  saveRDS(stopTable, file=paste0(outputLocation, "stopTable.rds"))
+  # return the exports as a list
+  return(list(validStopsSnappedFinal,
+              validStopTimesSnappedFinal,
+              validTripsSnapped,
+              validRoutesSnapped,
+              stopTable,
+              shape.links))
   
 }
 
@@ -347,7 +345,7 @@ exportGtfsSchedule <- function(links,
     stopTimes <- unroutedStopOutputs[[1]]
     nodePairRoutes <- unroutedStopOutputs[[2]]
     
-    saveRDS(nodePairRoutes, file=paste0(outputLocation,"nodePairRoutes.rds"))
+    # saveRDS(nodePairRoutes, file=paste0(outputLocation,"nodePairRoutes.rds"))
   }
   
   # the public transport network
