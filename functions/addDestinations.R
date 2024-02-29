@@ -43,6 +43,10 @@ addDestinations <- function(nodes_current,
   # read in the layers
   points <- oe_read(osmGpkg, query = paste(extra.tag.string, "FROM points"), quiet = TRUE)
   polygons <- oe_read(osmGpkg, query = paste(extra.tag.string, "FROM multipolygons"), quiet = TRUE)
+  
+  # read in and buffer the region
+  study.area <- st_buffer(st_read(region), regionBufferDist)  %>%
+    st_snap_to_grid(1)
 
   # function to extract specific destination types from point or polygon layers ----
   # ----------------------------------#
@@ -86,13 +90,13 @@ addDestinations <- function(nodes_current,
     bind_rows(destination.layer(points),
               
               # add PT stops (from GTFS feed) to point table
-              getPTStops(city, gtfs_feed, outputCrs, region, regionBufferDist) %>%
+              getPTStops(city, gtfs_feed, outputCrs, study.area) %>%
                 mutate(dest_type = "pt_stop")) %>%
-    
     mutate(dest_id = row_number(),
            area_m2 = 0,
            centroid_x = st_coordinates(.)[, 1],
-           centroid_y = st_coordinates(.)[, 2])
+           centroid_y = st_coordinates(.)[, 2]) %>%
+    st_filter(study.area, .predicate = st_intersects)
   
   echo("Destination polygon features\n")
   destination.poly <- 
@@ -101,7 +105,8 @@ addDestinations <- function(nodes_current,
     mutate(dest_id = max(destination.pt$dest_id) + row_number(),
            area_m2 = as.numeric(st_area(.)),
            centroid_x = st_coordinates(st_centroid(.))[, 1],
-           centroid_y = st_coordinates(st_centroid(.))[, 2])
+           centroid_y = st_coordinates(st_centroid(.))[, 2]) %>%
+    st_filter(study.area, .predicate = st_intersects)
   
 
   # # check numbers of each destination type

@@ -2,12 +2,11 @@
 
 # requires tidytransit (loaded in NetworkGenerator.R)
 
-getPTStops <- function(city, gtfs_feed, outputCrs, region, regionBufferDist) {
+getPTStops <- function(city, gtfs_feed, outputCrs, study.area) {
   # city = "Melbourne"
   # gtfs_feed = "../data/processed/gtfs.zip"
   # outputCrs = 7899
-  # region = "../data/processed/greater_melbourne.sqlite"
-  # regionBufferDist = 10000
+  # study.area = st_buffer(st_read("./data/processed/greater_melbourne.sqlite"), 10000)
   
   echo("Reading in GTFS data to find public transport stop locations\n")
   
@@ -16,7 +15,6 @@ getPTStops <- function(city, gtfs_feed, outputCrs, region, regionBufferDist) {
     gtfs_as_sf(., crs = 4326)
   
   # extract stops with their locations, filtered to study area
-  study.area <- st_buffer(st_read(region), regionBufferDist)
   stops <- gtfs$stops %>%
     st_transform(outputCrs) %>%
     st_set_geometry("geom") %>%
