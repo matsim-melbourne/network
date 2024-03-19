@@ -1,7 +1,7 @@
 # nodes_current<-networkSimplified[[1]]
 # edges_current<-networkSimplified[[2]]
 
-removeRedundantUndirectedEdges <- function(nodes_current,edges_current,road_types){
+removeRedundantUndirectedEdges <- function(nodes_current,edges_current,road_types,outputCrs){
   isOneWay <- road_types %>%
     dplyr::select(road_type,oneway)
   
@@ -29,7 +29,7 @@ removeRedundantUndirectedEdges <- function(nodes_current,edges_current,road_type
     ungroup() %>%
     data.frame() %>%
     st_sf() %>%
-    st_set_crs(28355)
+    st_set_crs(outputCrs)
   return(list(nodes_current,edgesNoRedundancies))
 }
 

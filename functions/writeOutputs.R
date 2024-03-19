@@ -1,6 +1,6 @@
 
 # SQlite ------------------------------------------------------------------
-exportSQlite <- function(networkFinal, outputDir){
+exportSQlite <- function(networkFinal, outputDir, outputCrs){
   
   cat('\n')
   echo(paste0('Writing the sqlite output: ', nrow(networkFinal[[2]]), 
@@ -11,14 +11,14 @@ exportSQlite <- function(networkFinal, outputDir){
   if(class(networkFinal[[1]])[1]!="sf"){
     networkFinal[[1]] <- networkFinal[[1]] %>% 
       mutate(GEOMETRY=paste0("POINT(",x," ",y,")")) %>%
-      st_as_sf(wkt = "GEOMETRY", crs = 28355) %>% 
+      st_as_sf(wkt = "GEOMETRY", crs = outputCrs) %>% 
       as.data.frame() %>%
       st_sf()
   }
   if(class(networkFinal[[2]])[1]!="sf"){
     networkFinal[[2]] <- networkFinal[[2]] %>% 
       mutate(GEOMETRY=paste0("LINESTRING(",fromX," ",fromY,",",toX," ",toY,")")) %>%
-      st_as_sf(wkt = "GEOMETRY", crs = 28355) %>% 
+      st_as_sf(wkt = "GEOMETRY", crs = outputCrs) %>% 
       as.data.frame() %>%
       st_sf()
   }
@@ -30,28 +30,33 @@ exportSQlite <- function(networkFinal, outputDir){
   st_write(networkFinal[[1]], paste0(outputDir,'/network.sqlite'),
            layer = 'nodes', driver = 'SQLite', layer_options = 'GEOMETRY=AS_XY',
            delete_layer = T)
+  if (length(networkFinal) > 2) {
+    st_write(networkFinal[[3]], paste0(outputDir,'/network.sqlite'),
+             layer = 'destinations', driver = 'SQLite', 
+             layer_options = 'GEOMETRY=AS_XY', delete_layer = T)
+  }
   
   echo(paste0('Finished generating the sqlite output\n'))
 }
 
 # ShapeFile ---------------------------------------------------------------
-exportShp <- function(networkFinal, outputDir){
+exportShp <- function(networkFinal, outputDir, outputCrs){
   
   cat('\n')
   echo(paste0('Writing the ShapeFile output: ', nrow(networkFinal[[2]]), 
               ' links and ', nrow(networkFinal[[1]]),' nodes\n'))
   
-  if(class(networkFinal[[1]])!="sf"){
+  if(class(networkFinal[[1]])[1]!="sf"){
     networkFinal[[1]] <- networkFinal[[1]] %>% 
       mutate(GEOMETRY=paste0("POINT(",x," ",y,")")) %>%
-      st_as_sf(wkt = "GEOMETRY", crs = 28355) %>% 
+      st_as_sf(wkt = "GEOMETRY", crs = outputCrs) %>% 
       as.data.frame() %>%
       st_sf()
   }
-  if(class(networkFinal[[2]])!="sf"){
+  if(class(networkFinal[[2]])[1]!="sf"){
     networkFinal[[2]] <- networkFinal[[2]] %>% 
       mutate(GEOMETRY=paste0("LINESTRING(",fromX," ",fromY,",",toX," ",toY,")")) %>%
-      st_as_sf(wkt = "GEOMETRY", crs = 28355) %>% 
+      st_as_sf(wkt = "GEOMETRY", crs = outputCrs) %>% 
       as.data.frame() %>%
       st_sf()
   }
@@ -64,6 +69,17 @@ exportShp <- function(networkFinal, outputDir){
   st_write(networkFinal[[1]], paste0(shpDir,'/nodes.shp'), 
            driver = "ESRI Shapefile", layer_options = 'GEOMETRY=AS_XY', 
            delete_layer = T)
+  if (length(networkFinal) > 2) {
+    message("When writing destinations to shapefile, long 'other_tags' may be truncated; consider using sqlite instead.")
+    dest.pt <- st_collection_extract(networkFinal[[3]], type = "POINT")
+    dest.poly <- st_collection_extract(networkFinal[[3]], type = "POLYGON")
+    st_write(dest.pt, paste0(shpDir,'/destinations_point.shp'),
+             driver = "ESRI Shapefile", layer_options = 'GEOMETRY=AS_XY', 
+             delete_layer = T)
+    st_write(dest.poly, paste0(shpDir,'/destinations_polygon.shp'),
+             driver = "ESRI Shapefile", layer_options = 'GEOMETRY=AS_XY', 
+             delete_layer = T)
+  }
   
   echo(paste0('Finished generating the ShapeFile output\n'))
   
@@ -171,27 +187,32 @@ exportXML <- function(networkFinal, outputDir){
   if(!("id" %in% colnames(links))) links <- links %>% mutate(id=NA)
   if(!("fwd_slope_pct" %in% colnames(links))) links <- links %>% mutate(fwd_slope_pct=NA, rvs_slope_pct=NA)
   
-  # Adding a reverse links for bi-directionals
-  bi_links <- links %>% 
-    filter(is_oneway==0) %>% 
-    rename(from_id=to_id, to_id=from_id, toX=fromX, toY=fromY, fromX=toX, 
-           fromY=toY, slope=rvs_slope_pct) %>% 
-    mutate(id=NA) %>%
-    dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
-                  permlanes, capacity, is_oneway, cycleway, highway, surface, 
-                  slope, is_cycle, is_walk, is_car, modes, id)
-  
-  links <- rbind( 
-    {links %>% dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
-                             permlanes, capacity, is_oneway, cycleway, highway, surface, 
-                             slope=fwd_slope_pct, is_cycle, is_walk, is_car, modes, id)},
-    bi_links) 
+  # # Adding a reverse links for bi-directionals - not required as makeEdgesOneway has made them all oneway
+  # bi_links <- links %>% 
+  #   filter(is_oneway==0) %>% 
+  #   rename(from_id=to_id, to_id=from_id, toX=fromX, toY=fromY, fromX=toX, 
+  #          fromY=toY, slope=rvs_slope_pct) %>% 
+  #   mutate(id=NA) %>%
+  #   dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
+  #                 permlanes, capacity, is_oneway, cycleway, highway, surface, 
+  #                 slope, is_cycle, is_walk, is_car, modes, id)
+  # 
+  # links <- rbind( 
+  #   {links %>% dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
+  #                            permlanes, capacity, is_oneway, cycleway, highway, surface, 
+  #                            slope=fwd_slope_pct, is_cycle, is_walk, is_car, modes, id)},
+  #   bi_links) 
   
   # Adding bicycle and extra information
   links <-  fncols(links, c("id","osm_id", "highway", "cycleway","slope", 
                             "bicycleInfrastructureSpeedFactor")) 
   links <- links %>%
-    mutate(id = ifelse(is.na(id),row_number(),id)) %>% 
+    # mutate(id = ifelse(is.na(id),row_number(),id)) %>%
+    mutate(id = case_when(
+      is.na(id) & "link_id" %in% names(links) ~ as.character(link_id),
+      is.na(id) ~ as.character(row_number()),
+      TRUE ~ as.character(id))
+    ) %>%
     mutate(type = replace(highway, is.na(highway), "NotSpecified")) %>% 
     mutate(surface = ifelse(is.na(surface),"asphalt",surface)) %>% 
     mutate(cycleway = replace(cycleway, is.na(cycleway),"No")) %>% 

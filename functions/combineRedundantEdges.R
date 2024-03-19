@@ -1,7 +1,7 @@
 # nodes_current<-intersectionsSimplified[[1]]
 # edges_current<-intersectionsSimplified[[2]]
 
-combineRedundantEdges <- function(nodes_current,edges_current){
+combineRedundantEdges <- function(nodes_current,edges_current,outputCrs){
   
   # assuming a dataframe with a 'current_group' column, merge edges together
   groupingFunction <- function(grouped_edges) {
@@ -130,7 +130,7 @@ combineRedundantEdges <- function(nodes_current,edges_current){
     inner_join(edges_all, by="uid") %>%
     dplyr::select(-uid) %>%
     st_sf() %>%
-    st_set_crs(28355)
+    st_set_crs(outputCrs)
 
   return(list(nodes_current,edges_all_geom))
 }

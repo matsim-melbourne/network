@@ -1,33 +1,42 @@
 # Network generation data
 
-This directory contains inputs files required to generate a MATSim network for Melbourne, which can be found [here](https://cloudstor.aarnet.edu.au/plus/s/ssLkX8Uez64rV3D). Alternatively, you can use the `./prepare.sh` command as described below to download the data you need.
+This directory contains input files required to generate MATSim networks for Bendigo and Melbourne, which can be found [here](https://osf.io/ajycn/). 
 
-## How to populate
+## Files to download
 
-To populate this directory with the required data files, use the `./prepare.sh` with the relevant arguments. Valid arguments and their descriptions are presented in the table below:
+Download the following files for the relevant network location.
 
-| Argument | Input file                   | Description                                   |
-|----------|------------------------------|-----------------------------------------------|
-| -region  | studyRegion.sqlite           | Greater Melbourne region                      |
-| -osm19   | melbourne.osm                | Raw OSM file for Melbourne, 2019              |
-| -melb    | melbourne.sqlite             | Road attributes                               |
-| -net     | network.sqlite               | non-planar edges and nodes                    |
-| -gtfs19  | gtfs_au_vic_ptv_20191004.zip | GTFS feed - 2019-10-04                        |
-| -demx10  | DEMx10EPSG28355.tif          | Digital Elevation Model data (x10, EPSG28355) |
-| -A       | all of the above             | It Will download all the input files, (~1.2gb)|
+### Bendigo
+| File                     | Description                                       |
+|--------------------------|---------------------------------------------------|
+| greater_bendigo.sqlite   | Boundary of the Greater Bendigo Local Government Area |
+| dem_bendigo.tif          | Digital elevation model data for the Greater Bendigo area |
+| NDVI_Bendigo_2023.tif    | NDVI data for the Greater Bendigo area              |
+| gtfs.zip                 | GTFS feed for Victoria as at 20 October 2023      |
 
-As an example, to start from processing raw OSM (step 1), and generating a network without elevation and public transport, you need to run the following to get the required input:
-```
-./prepare.sh -osm19
-```
 
-Alternatively, if you want to skip processing raw OSM and start directly from `makeNetwork.sh`, and generate a network that has elevation and PT network from GTFS, you need to run the following to download required inputs:
-```
-./prepare.sh -melb -net -gtfs19 -demx10
-```
-If you are not sure about which inputs are required, just simply run the following to download all the inputs:
-```
-./prepare.sh -A
-```
+### Melbourne
+| File                     | Description                                       |
+|--------------------------|---------------------------------------------------|
+| greater_melbourne.sqlite | Boundary of the Greater Melbourne Greater Capital City Statistical Area |
+| dem_melbourne.tif        | Digital elevation model data for the Greater Melbourne area |
+| NDVI_Melbourne_2023.tif  | NDVI data for the Greater Melbourne area        |
+| gtfs.zip                 | GTFS feed for Victoria as at 20 October 2023      |
 
-If any issues with the script, please download each required file directly.
+
+## Other files
+
+The directory also contains the following other files, from which the region boundary files above were created.
+
+| File                            | Description                                  |
+|---------------------------------|----------------------------------------------|
+| LGAs.zip                        | Local government areas of Victoria (Vicmap)  |
+| GCCSA_2021_AUST_SHP_GDA2020.zip | Greater capital city statistical areas (ABS) |
+
+
+The file `data/data prep tools.R` contains:
+* the script used to extract the region boundary files from the LGA and GCCSA files above, and
+* the script used to crop the digital elevation files from a DEM file for the whole of Victoria (available for download from https://discover.data.vic.gov.au/dataset/vicmap-elevation-dem-10m, 9.3 GB).  
+Those scripts may also be useful to generate similar data input files for other locations if required.
+
+The NDVI files were created from Sentinel 2 data using Google Earth Engine at https://code.earthengine.google.com/.

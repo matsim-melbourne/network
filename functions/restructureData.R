@@ -10,12 +10,12 @@ restructureData <- function(networkList, highway_lookup,
   # finding merged bikepath ids
   bikepath_uids <- links %>% 
     st_drop_geometry() %>% 
-    filter(cycleway=="4" & highway_order<15) %>% 
+    filter((cycleway == "4" | cycleway == "5") & highway_order < 16) %>% 
     dplyr::select(uid) %>% unlist() %>%  as.double()
   # changing merged bikepaths to regular bikepaths
   bikepaths <- links %>% 
     filter(uid %in% bikepath_uids) %>% 
-    mutate(highway_order=15) %>% 
+    mutate(highway_order = 16) %>% 
     mutate(freespeed=defaults_df$freespeed[15]) %>% 
     mutate(laneCapacity=defaults_df$laneCapacity[15]) %>% 
     mutate(is_car=0) %>% 
@@ -25,7 +25,7 @@ restructureData <- function(networkList, highway_lookup,
   # merging changed bikepaths back with rest of the links
   links <- links %>% 
     mutate(cycleway=ifelse(uid %in% bikepath_uids,0,cycleway)) %>% # removing bikepaths from those that had it merged 
-    mutate(is_cycle=ifelse(highway_order%in%c(1,8,2,9),0,is_cycle)) %>% # removing bikepaths from those that had it merged 
+    mutate(is_cycle = ifelse(uid %in% bikepath_uids & highway_order %in% c(1, 8), 0, is_cycle)) %>% # removing bikepaths from those that had it merged 
     dplyr::select(-uid) %>% 
     rbind(bikepaths)
 
@@ -65,9 +65,11 @@ restructureData <- function(networkList, highway_lookup,
     mutate(cycleway=ifelse(cycleway==2, "simple_lane"   , cycleway)) %>%
     mutate(cycleway=ifelse(cycleway==1, "shared_street" , cycleway)) %>%
     mutate(cycleway=ifelse(cycleway==0, NA              , cycleway)) %>%
-    dplyr::select(from_id, to_id, fromX, fromY, toX, toY, length, freespeed, 
-                  permlanes, capacity, highway, is_oneway, cycleway, surface, 
-                  is_cycle, is_walk, is_car, modes) %>%
+    dplyr::select(any_of(c("osm_id","from_id", "to_id", "fromX", "fromY", "toX", "toY",  
+                           "length", "freespeed", "permlanes", "capacity",  
+                           "highway", "is_oneway", "cycleway", "surface",
+                           "is_cycle", "is_walk", "is_car", "modes")), 
+                  contains("ndvi")) %>%
     mutate(id=NA) %>%
     relocate(id)
 
