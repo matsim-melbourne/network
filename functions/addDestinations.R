@@ -45,7 +45,11 @@ addDestinations <- function(nodes_current,
   polygons <- oe_read(osmGpkg, query = paste(extra.tag.string, "FROM multipolygons"), quiet = TRUE)
   
   # read in and buffer the region
-  study.area <- st_buffer(st_read(region), regionBufferDist)  %>%
+  region.poly <- st_read(region)
+  if (st_crs(region.poly)$epsg != outputCrs) {
+    region.poly <- st_transform(region.poly, outputCrs)
+  }
+  study.area <- st_buffer(region.poly, regionBufferDist)  %>%
     st_snap_to_grid(1)
 
   # function to extract specific destination types from point or polygon layers ----

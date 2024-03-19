@@ -188,6 +188,12 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
       networkUnconfigured <- 
         list(st_read(unconfiguredSqlite, layer = "nodes") %>% st_set_geometry("geom"),
              st_read(unconfiguredSqlite, layer = "edges") %>% st_set_geometry("geom"))
+      if (st_crs(networkUnconfigured[[1]])$epsg != outputCrs) {
+        networkUnconfigured[[1]] <- st_transform(networkUnconfigured[[1]], outputCrs)
+      }
+      if(st_crs(networkUnconfigured[[2]])$epsg != outputCrs) {
+        networkUnconfigured[[2]] <- st_transform(networkUnconfigured[[2]], outputCrs)
+      }
       osm_metadata <- st_read(unconfiguredSqlite, layer = "osm_metadata") %>%
         filter(osm_id %in% networkUnconfigured[[2]]$osm_id)
       
@@ -336,8 +342,11 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
     if (file.exists(region)) {
       # read in the study region boundary 
       echo("Using Region file for GTFS processing\n")
-      studyRegion <- st_read(region, quiet=T) %>%
-        st_buffer(regionBufferDist) %>%
+      region.poly <- st_read(region)
+      if (st_crs(region.poly)$epsg != outputCrs) {
+        region.poly <- st_transform(region.poly, outputCrs)
+      }
+      studyRegion <- st_buffer(region.poly, regionBufferDist)  %>%
         st_snap_to_grid(1)
     } else {
       echo("Region file was not found, skipping\n")

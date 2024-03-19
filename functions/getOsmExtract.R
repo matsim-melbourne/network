@@ -12,8 +12,11 @@ getOsmExtract <- function(region,
   # osmGpkg = "./output/temp_bendigo_osm.gpkg"
 
   # load region and buffer by selected distance (eg 10km)
-  region <- st_read(region)
-  region.buffer <- st_buffer(region, regionBufferDist) %>%
+  region.poly <- st_read(region)
+  if (st_crs(region.poly)$epsg != outputCrs) {
+    region.poly <- st_transform(region.poly, outputCrs)
+  }
+  region.buffer <- st_buffer(region.poly, regionBufferDist) %>%
     st_snap_to_grid(1)
  
   # increase timeout to allow time for large Australia extract to download
@@ -21,7 +24,7 @@ getOsmExtract <- function(region,
   options(timeout = 7200)
   
   # download the full extract (whole of Australia; quite slow)
-  download.url <- oe_match(region, crs = outputCrs)$url
+  download.url <- oe_match(region.buffer, crs = outputCrs)$url
   echo(paste("Downloading OSM extract from", download.url, "\n"))
   full.extract <- oe_download(download.url, download_directory = ".")
   
