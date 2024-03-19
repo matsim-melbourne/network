@@ -54,6 +54,7 @@ getOsmExtract <- function(region,
       message(paste("Problem features detected in OSM layer", current.layer.name,
                  "; removing problems (may take a while)"))
       for (j in 1:nrow(current.layer)) {
+        if (j %% 500 == 0) print(paste("Checked", j, "of", nrow(current.layer), "features"))
         tryCatch({
           current.feature.intersected <- current.layer[j,] %>%
             st_filter(region.buffer, .predicate = st_intersects)
