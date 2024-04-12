@@ -1,4 +1,4 @@
-simplifyIntersections <- function(n_df, l_df, shortLinkLength=10){
+simplifyIntersections <- function(n_df, l_df, shortLinkLength=10, outputCrs){
   # shortLinkLength = 20
   # l_df=largestComponent[[2]]
   # n_df=largestComponent[[1]]
@@ -48,7 +48,7 @@ simplifyIntersections <- function(n_df, l_df, shortLinkLength=10){
     filter(!id %in% comp_df$node_id) %>%
     rbind(dplyr::select(comp_df_centroid,id=cluster_id,is_roundabout,is_signal,X,Y)) %>%
     mutate(geom=paste0("POINT(",X," ",Y,")")) %>%
-    st_as_sf(wkt = "geom", crs = 28355)
+    st_as_sf(wkt = "geom", crs = outputCrs)
   
   # this function adds endpoints to the geometries
   addEndpoints <- function(fromX,fromY,toX,toY,geom) {
@@ -84,7 +84,7 @@ simplifyIntersections <- function(n_df, l_df, shortLinkLength=10){
     st_drop_geometry() %>%
     mutate(geom=geomExtended) %>%
     st_sf() %>%
-    st_set_crs(28355) %>%
+    st_set_crs(outputCrs) %>%
     # remove any loops
     filter(from_id != to_id) %>%
     dplyr::select(-fromX,-fromY,-toX,-toY) %>%

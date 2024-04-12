@@ -1,11 +1,27 @@
-addElevation2Nodes <- function(nodes, rasterFile, multiplier=1){
-  elevation <- raster(rasterFile) 
-  nodes$z <- round(raster::extract(elevation ,as(nodes, "Spatial"),method='bilinear'))/multiplier
+addElevation2Nodes <- function(nodes, rasterFile, multiplier=1, outputCrs){
+  
+  # elevation <- raster(rasterFile) 
+  # nodes$z <- round(raster::extract(elevation ,as(nodes, "Spatial"),method='bilinear'))/multiplier
+
+  # read in dem file, and convert to outputCrs if necessary
+  elevation <- rast(rasterFile)
+  outputCrsEPSG <- paste0("EPSG:", outputCrs)
+  if (!same.crs(elevation, outputCrsEPSG)) elevation <- project(elevation, outputCrsEPSG)
+  
+  # find elevation values, and add to nodes as 'z' field
+  elevation.values <- round(terra::extract(elevation, nodes, method='bilinear', ID = FALSE)) / multiplier
+  names(elevation.values) <- "z"
+  elevation.values <- elevation.values %>% 
+    mutate(z = ifelse(is.nan(z), NA, z)) %>%
+    .$z
+  
+  nodes$z <- elevation.values
+
   return(nodes)
-}
+}  
 
 addElevation2Links <- function(network){
-  network <- networkRestructured
+  # network <- networkRestructured
   nodes <- network[[1]]
   links <- network[[2]]
   

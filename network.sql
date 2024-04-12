@@ -2,31 +2,59 @@
 \timing
 -- transforms the geometries to a projected (i.e, x,y) system and snaps to the
 -- nearest metre. Was using GDA2020 (7845), now using MGA Zone 55 (28355)
-ALTER TABLE roads
+
+-- in case the road has multi-lineStrings
+DROP TABLE IF EXISTS roads_split;
+CREATE TABLE roads_split AS
+SELECT ogc_fid, osm_id, highway, other_tags,
+       (ST_Dump(geom)).geom AS geom
+FROM roads;
+
+
+ALTER TABLE roads_split
  ALTER COLUMN geom TYPE geometry(LineString,:v1)
   USING ST_SnapToGrid(ST_Transform(geom,:v1),1);
 ALTER TABLE roads_points
  ALTER COLUMN geom TYPE geometry(Point,:v1)
   USING ST_SnapToGrid(ST_Transform(geom,:v1),1);
-CREATE INDEX roads_points_gix ON roads USING GIST (geom);
+CREATE INDEX roads_points_gix ON roads_points USING GIST (geom);
 
 -- determine if the road segment is a bridge or tunnel
-ALTER TABLE roads ADD COLUMN bridge_or_tunnel BOOLEAN;
-UPDATE roads
+ALTER TABLE roads_split ADD COLUMN bridge_or_tunnel BOOLEAN;
+UPDATE roads_split
   SET bridge_or_tunnel =
        CASE WHEN other_tags LIKE '%bridge%' OR other_tags LIKE '%tunnel%' THEN TRUE
        ELSE FALSE END;
-CREATE INDEX roads_gix ON roads USING GIST (geom);
+CREATE INDEX roads_split_gix ON roads_split USING GIST (geom);
 
 -- find the bridge-bridge or road-road intersections
 DROP TABLE IF EXISTS line_intersections;
 CREATE TABLE line_intersections AS
 SELECT a.osm_id AS osm_id_a, b.osm_id AS osm_id_b,
   ST_Intersection(a.geom,b.geom) AS geom
-FROM roads AS a, roads AS b
+FROM roads_split AS a, roads_split AS b
 WHERE a.osm_id < b.osm_id AND
   a.bridge_or_tunnel = b.bridge_or_tunnel AND
   ST_Intersects(a.geom, b.geom) = TRUE;
+
+
+-- fixing the cases where the line intersections end up as edges. Here we
+-- store their individual endpoints
+DROP TABLE IF EXISTS line_intersections2;
+CREATE TABLE line_intersections2 AS
+  SELECT osm_id_a, osm_id_b, geom
+  FROM line_intersections
+  WHERE ST_GeometryType(geom) = 'ST_Point'
+UNION
+  SELECT osm_id_a, osm_id_b, ST_StartPoint(geom) AS geom
+  FROM line_intersections
+  WHERE ST_GeometryType(geom) = 'ST_LineString'
+UNION
+  SELECT osm_id_a, osm_id_b, ST_EndPoint(geom) AS geom
+  FROM line_intersections
+  WHERE ST_GeometryType(geom) = 'ST_LineString';
+
+
 
 -- group the intersections by osm_id
 DROP TABLE IF EXISTS line_intersections_grouped;
@@ -34,10 +62,10 @@ CREATE TABLE line_intersections_grouped AS
 SELECT c.osm_id, st_unaryunion(st_collect(c.geom)) AS geom
 FROM
  (SELECT a.osm_id_a AS osm_id, a.geom
-  FROM line_intersections as a
+  FROM line_intersections2 as a
   UNION
   SELECT b.osm_id_b AS osm_id, b.geom
-  FROM line_intersections AS b) AS c
+  FROM line_intersections2 AS b) AS c
 GROUP BY osm_id;
 
 -- take the intersections, buffer them 0.01m, and use them to cut the lines they
@@ -47,7 +75,7 @@ DROP TABLE IF EXISTS line_cut;
 CREATE TABLE line_cut AS
 SELECT a.osm_id,
 (ST_Dump(ST_SnapToGrid(ST_Difference(a.geom,ST_Buffer(b.geom,0.01)),1))).geom AS geom
-FROM roads AS a, line_intersections_grouped AS b
+FROM roads_split AS a, line_intersections_grouped AS b
 WHERE a.osm_id = b.osm_id;
 
 -- all the osm_ids currently processed. Some segments don't have any
@@ -62,9 +90,9 @@ CREATE UNIQUE INDEX osm_id_idx ON unique_ids (osm_id);
 -- adding the remaining road segments
 INSERT INTO line_cut
 SELECT a.osm_id, a.geom
-FROM roads AS a,
+FROM roads_split AS a,
  (SELECT osm_id
-  FROM roads
+  FROM roads_split
   EXCEPT
   SELECT osm_id
   FROM unique_ids) AS b
