@@ -78,12 +78,13 @@ processOsmTags <- function(osm_df,this_defaults_df){
       if(any(bicycle_tags %in% "no")) df$is_cycle[1]=0
       
       if ("lanes" %in% keys) {
+        # lanes is number of tagged lanes
         taggedLanes = as.integer(values[which(keys == "lanes")])
-        # lanes is number of tagged lanes if one-way, or divide by 2 (rounded up) if two-way
-        newLanes = ifelse(df$is_oneway[1] == 1, taggedLanes, ceiling(taggedLanes / 2))
-        if (!is.na(newLanes) & newLanes > 0) {
-          df$permlanes[1] = newLanes
-        }
+        df$permlanes[1] = taggedLanes
+      } else {
+        # lanes is default number, multiplied by 2 if two-way
+        newLanes = ifelse(df$is_oneway[1] == 0, df$permlanes[1] * 2, df$permlanes[1])
+        df$permlanes[1] = newLanes
       }
     }
     return(df)

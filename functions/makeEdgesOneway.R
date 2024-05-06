@@ -10,6 +10,10 @@ makeEdgesOneway <- function(nodes_current, edges_current) {
   names.to.change <- c("fromX", "fromY", "toX", "toY")
   edges_current <- rename_with(edges_current, tolower, any_of(names.to.change))
   
+  # for two-way, divide permlanes by 2, rounded up (as they will be split into 2 * one-way)
+  edges_current <- edges_current %>%
+    mutate(permlanes = ifelse(is_oneway == 0, ceiling(permlanes / 2), permlanes))
+  
   # select only two-way edges
   edges_twoway <- edges_current %>%
     filter(is_oneway == 0)
