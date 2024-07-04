@@ -64,10 +64,14 @@ combineUndirectedAndDirectedEdges <- function(nodes_current,edges_current,output
     # directed edges need the from id and to id in the correct order
     mutate(from_id=ifelse(from_id_directed==-1,from_id,from_id_directed)) %>%
     mutate(to_id=ifelse(to_id_directed==-1,to_id,to_id_directed)) %>%
-    # Setting any edges with zero lanes to one.
-    mutate(permlanes=ifelse(permlanes==0,1,permlanes)) %>%
     # Only road edges can be one way
     mutate(is_oneway=ifelse(is_car==0,0,is_oneway)) %>%
+    # Setting any edges with zero lanes to one (if one-way) or two (if two-way)
+    mutate(permlanes = case_when(
+      permlanes == 0 & is_oneway == 1 ~ 1,
+      permlanes == 0 & is_oneway == 0 ~ 2,
+      TRUE                            ~ permlanes
+    )) %>%
     dplyr::select(-current_group,-from_id_directed,-to_id_directed)
   
   # geometry of shortest edges
