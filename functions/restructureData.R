@@ -16,10 +16,10 @@ restructureData <- function(networkList, highway_lookup,
   bikepaths <- links %>% 
     filter(uid %in% bikepath_uids) %>% 
     mutate(highway_order = 16) %>% 
-    mutate(freespeed=defaults_df$freespeed[15]) %>% 
-    mutate(laneCapacity=defaults_df$laneCapacity[15]) %>% 
+    mutate(freespeed=defaults_df$freespeed[16]) %>% 
+    mutate(laneCapacity=defaults_df$laneCapacity[16]) %>% 
     mutate(is_car=0) %>% 
-    mutate(permlanes=1) %>% # bikepaths are assumed sinlge lane
+    mutate(permlanes=2) %>% # bikepaths are assumed one lane in each direction
     mutate(is_oneway=0) %>% # bikepaths are assumed bi-directional 
     dplyr::select(-uid)
   # merging changed bikepaths back with rest of the links

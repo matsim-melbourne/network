@@ -191,7 +191,9 @@ processGtfs <- function(outputLocation = "./output/generated_network/pt/",
     # only shape.nodes are used for snapping bus stops
     networkNodesBus <- networkNodes %>%
       filter(id %in% shape.nodes$id)
- 
+    networkLinksBus <- links %>%
+      filter(from_id %in% networkNodesBus$id | to_id %in% networkNodesBus$id)
+    
   } else {
     
     if (onroadBus & !"shapes" %in% names(gtfs)) {
@@ -200,6 +202,8 @@ processGtfs <- function(outputLocation = "./output/generated_network/pt/",
     
     # all nodes can be used for snapping bus stops
     networkNodesBus <- networkNodes
+    networkLinksBus <- links %>%
+      filter(from_id %in% networkNodesBus$id | to_id %in% networkNodesBus$id)
     shape.links <- NA
   }
   
@@ -211,12 +215,49 @@ processGtfs <- function(outputLocation = "./output/generated_network/pt/",
   serviceTypes <- as.character(c(validStopsBus$service_type, validStopsOther$service_type))
 
   # snapping the stops to the nearest node in the road network
-  nearestNodeIdBus <- st_nearest_feature(validStopsBus, networkNodesBus)
+  # for bus - nearest valid node on the nearest link
+  # setup for parallel processing and progress reporting
+  cores <- detectCores()
+  cluster <- parallel::makeCluster(cores)
+  doSNOW::registerDoSNOW(cluster)
+  pb <- txtProgressBar(max = max(nrow(validStopsBus), 2), style = 3)
+  progress <- function(n) setTxtProgressBar(pb, n)
+  opts <- list(progress = progress)
+  
+  # report
+  echo(paste("Finding nearest node on nearest link for", nrow(validStopsBus), "bus stops;",
+             "parallel processing with", cores, "cores\n"))
+  
+  # loop to find list of boundary points
+  nearestNodeBus <-
+    foreach(i = 1:nrow(validStopsBus),
+            # foreach(i = 1:10,
+            .combine = rbind,
+            .packages = c("dplyr", "sf"),
+            .options.snow = opts) %dopar% {
+              
+              stop <- validStopsBus[i,]
+              # nearest link (which must contain a NetworkNode) to the stop
+              nearest.link <- networkLinksBus[st_nearest_feature(stop, networkLinksBus), ]
+              # the link's NetworkNodes
+              eligible.nodes <- networkNodesBus %>%
+                filter(id == nearest.link$from_id | id == nearest.link$to_id)
+              # nearest of the link's NetworkNodes to the stop
+              nearest.node <- networkNodesBus %>%
+                filter(id == eligible.nodes$id[st_nearest_feature(stop, eligible.nodes)])
+              
+              return(nearest.node)
+            }
+  
+  # close the progress bar and cluster
+  close(pb)
+  stopCluster(cluster)
+  
+  # otherwise - nearest valid node
   nearestNodeIdOther <- st_nearest_feature(validStopsOther, networkNodes)
-
-  # subsetting the networkNodes and rearranging to match validStops
-  nearestNodeBus <- networkNodesBus[nearestNodeIdBus, ]
   nearestNodeOther <- networkNodes[nearestNodeIdOther, ]
+  
+  # placing in order to match validStops
   nearestNode <- rbind(nearestNodeBus, nearestNodeOther)
   
   # calculating the distance from each stop to the nearest node in the road network

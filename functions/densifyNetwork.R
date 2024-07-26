@@ -122,20 +122,39 @@ densifyNetwork <- function(networkList, minimum_length=400, densifyBikeways=F){
                                data.frame(st_coordinates(nodes_segmented))) %>%
     dplyr::select(id,is_roundabout,is_signal,X,Y)
   
+  nodes_combined <- bind_rows(
+    nodes_df,
+    nodes_segmented %>% st_set_crs(st_crs(nodes_df))
+  ) %>%
+    st_sf()
+  
+  # some coordinates of new links may not exactly match node coordinates due to snapping to grid
+  # join the node x and y details to the links
   links_segmented <- links_segmented %>%
-    dplyr::select(-direction)
+    left_join(nodes_combined %>%
+                st_drop_geometry() %>%
+                dplyr::select(id, fromx = X, fromy = Y), 
+              by = c("from_id" = "id")) %>%
+    left_join(nodes_combined %>%
+                st_drop_geometry() %>%
+                dplyr::select(id, tox = X, toy = Y),
+              by = c("to_id" = "id")) %>%
+    mutate(startx = ifelse(direction == "forward", fromx, tox),
+           starty = ifelse(direction == "forward", fromy, toy),
+           endx = ifelse(direction == "forward", tox, fromx),
+           endy = ifelse(direction == "forward", toy, fromy))
+  
+  # correct coordinates at start and end of links to exactly match node coordinates
+  links_segmented <- correct_coords(links_segmented)
+  
+  links_segmented <- links_segmented %>%
+    dplyr::select(names(links_unsegmented))
   
   links_combined <- bind_rows(
     links_unsegmented,
     links_segmented %>% st_set_crs(st_crs(links_unsegmented))
   ) %>%
     dplyr::select(-tmp_id) %>%
-    st_sf()
-  
-  nodes_combined <- bind_rows(
-    nodes_df,
-    nodes_segmented %>% st_set_crs(st_crs(nodes_df))
-  ) %>%
     st_sf()
   
   # st_write(nodes_combined,"networkDensified.sqlite",layer="nodes",delete_dsn=TRUE)
@@ -157,4 +176,43 @@ addMode <- function(networkList) {
   return(list(nodes,links))
 }
 
+# function to ensure link start and endpoints match the coordinates of their from 
+# and to nodes - note each link must contain startx/y and endx/y coordinates from 
+# its start and end nodes, where 'start' and 'end' match the direction of digitisation of the link
+correct_coords <- function(links) {
+  # extract coordinates for all simplified geometries
+  coords <- st_coordinates(links)
+  
+  # find the indices for the coordinates that are start and end points
+  line_ids <- coords[, "L1"]
+  first_indices <- !duplicated(line_ids)
+  last_indices <- !duplicated(line_ids, fromLast = TRUE)
+  
+  # extract just the coordinates for the first and last points
+  first_coords <- coords[first_indices, ]
+  last_coords <- coords[last_indices, ] 
+  
+  # replace first and last coordinates with original start/endpoint geometry
+  first_coords[, c("X", "Y")] <- cbind(links$startx, links$starty)
+  last_coords[, c("X", "Y")] <- cbind(links$endx, links$endy)
+  
+  # combine modified first and last coordinates with the rest of the coordinates
+  modified_coords <- coords
+  modified_coords[first_indices, c("X", "Y")] <- first_coords[, c("X", "Y")]
+  modified_coords[last_indices, c("X", "Y")] <- last_coords[, c("X", "Y")]
+  
+  # create new geometries with the modified coordinates using split
+  split_coords <- split(modified_coords[, c("X", "Y")], line_ids)
+  new_geometries <- lapply(split_coords, function(x) {
+    # convert coordinates to matrix
+    mat <- matrix(x, ncol = 2)
+    # create linestring from matrix
+    st_linestring(mat)
+  })
+  
+  # update the geometries in the simplified_edges object
+  st_geometry(links) <- st_sfc(new_geometries, crs = st_crs(links))
+  
+  return(links)
+}
 
