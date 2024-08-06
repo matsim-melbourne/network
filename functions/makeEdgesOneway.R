@@ -1,6 +1,6 @@
 # function to convert two-way edges to one-way
 
-makeEdgesOneway <- function(nodes_current, edges_current) {
+makeEdgesOneway <- function(nodes_current, edges_current, defaults_df) {
   
   # testing
   # nodes_current <- input.nodes
@@ -18,6 +18,19 @@ makeEdgesOneway <- function(nodes_current, edges_current) {
   # select only two-way edges
   edges_twoway <- edges_current %>%
     filter(is_oneway == 0)
+  
+  # add the one-way edges with contra-flow bike lanes, and set their attributes to bike only
+  edges_contrabike <- edges_current %>%
+    filter(is_oneway == 1 & contrabike == 1) %>%
+    mutate(freespeed = ifelse(freespeed < defaults_df$freespeed[16],
+                              freespeed, defaults_df$freespeed[16]),
+           permlanes = defaults_df$permlanes[16],
+           capacity = ifelse(capacity < defaults_df$laneCapacity[16],
+                             capacity,
+                             defaults_df$laneCapacity[16]),
+           is_cycle = 1, is_car = 0,  # no change to is_walk
+           modes = if_else(is_walk == 0, "bike", "bike,walk"))
+  edges_twoway <- bind_rows(edges_twoway, edges_contrabike)
   
   # swap from/to details
   edges_twoway_reversed <- edges_twoway %>%

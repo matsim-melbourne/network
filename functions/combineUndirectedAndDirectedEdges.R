@@ -50,6 +50,7 @@ combineUndirectedAndDirectedEdges <- function(nodes_current,edges_current,output
               permlanes=sum(permlanes,na.rm=T),
               is_oneway=min(undirected_road,na.rm=T),
               cycleway=max(cycleway,na.rm=T),
+              contrabike = max(contrabike, na.rm = T),
               highway_order=min(highway_order,na.rm=T), # selecting the highest rank
               # surface=surface[which.max(length[!is.na(surface)])], # Take the max length surface type
               surface=surface[which.max(length)], # Take the max length surface type

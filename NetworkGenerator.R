@@ -333,7 +333,8 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
   # traffic stress and slope may be different in each direction)
   echo("Making all links one way\n")
   networkOneway <- makeEdgesOneway(networkRestructured[[1]], 
-                                   networkRestructured[[2]])
+                                   networkRestructured[[2]],
+                                   defaults_df)
   
   # Adding PT pseudo-network based on GTFS
   # Adjust your analysis date and gtfs feed name above
