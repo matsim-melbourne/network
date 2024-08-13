@@ -9,7 +9,7 @@ getPlayground <- function(layer) {
 
 getPark <- function(layer) {
   return(layer %>% filter(leisure == "park" | landuse == "recreation_ground" |
-                            (leisure == "garden" & garden_type == "botanic"))) 
+                            (leisure == "garden" & garden_type == "botanical"))) 
 }
 
 
