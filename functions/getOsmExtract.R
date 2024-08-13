@@ -30,13 +30,17 @@ getOsmExtract <- function(region,
   
   # convert to gpkg, including all layers ('boundary' will clip to bounding box)
   echo(paste("Converting downloaded OSM extract to .gpkg for selected region\n"))
-  region.gpkg <- 
-    oe_vectortranslate(full.extract, 
-                       layer = st_layers(full.extract)$name,
-                       vectortranslate_options = c("-t_srs",
-                                                   paste0("EPSG:", outputCrs)),
-                       boundary = region.buffer,
-                       boundary_type = "spat")  # 'spat' should intersect rather than clip, but still seems to clip
+  layers <- st_layers(full.extract)$name
+  for(i in 1:length(layers)) {
+    layer <- layers[i]
+    region.gpkg <- 
+      oe_vectortranslate(full.extract, 
+                         layer = layer,
+                         vectortranslate_options = c("-t_srs",
+                                                     paste0("EPSG:", outputCrs)),
+                         boundary = region.buffer,
+                         boundary_type = "spat")  # 'spat' should intersect rather than clip, but still seems to clip
+  }
   
   # intersect with region buffer, eliminating errors and save to permanent location
   for (i in 1:length(st_layers(region.gpkg)$name)) {
