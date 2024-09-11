@@ -31,6 +31,7 @@ The city parameters are as follows.
 |--------------------|----------------|-----------------------------------------|
 | region             | .sqlite file   | Required if OSM extract is to be downloaded, or destinations (see below) are to be extracted. This must be the location of a file in sqlite format which defines the boundary of the area for which the OSM extract is required.|
 | outputCrs          | CRS            |Specify the appropriate EPSG coordinate reference system number for the region.|
+| fullExtractLocation | .osm.pbf file | Required if 'extractOsm' and 'useFullExtractHeld' are both set to 'T'.  The location of a file in .osm.pbf file which is already held (instead of downloading the .osm.pbf file) and is to be clipped to the region. |
 | osmGpkg            | .gpkg file     | The location to which an OSM extract in .gpkg format will be saved, or where an existing .gpkg file is stored if already held.|
 | unconfiguredSqlite | .sqlite file   | The location to which an unconfigured network in .sqlite format will be saved, or where an existing unconfigured network is stored if already held.|
 | cropAreaPoly       | area location  | An optional parameter for cropping the OSM extract to a smaller test area. See https://github.com/JamesChevalier/cities/tree/master/australia/victoria for available locations.  |

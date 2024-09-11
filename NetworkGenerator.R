@@ -12,8 +12,11 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
   #   which Osm extract is to be downloaded (assumed to be in sqlite format 
   #   with a single layer)
   # •	outputCrs: desired coordinate system for network
+  # •	fullExtractLocation: if 'extractOsm=T' and 'useFullExtractHeld=T', location 
+  #   where an .osm.pbf file is already held which is to be clipped and converted
+  #   to a .gpkg file for the region
   # •	osmGpkg: location where downloaded OSM extract for region is to be stored
-  #   (if 'downloadOsm=T') and/or read from (if 'processOsm=T')
+  #   (if 'extractOsm=T') and/or read from (if 'processOsm=T')
   # •	unconfiguredSqlite: location where processed OSM file is to be stored
   #   (if 'networkFromOsm=T') or read from (if 'networkFromOsm=F')
   # •	cropAreaPoly: if 'crop2TestArea=T' cropArea location from 
@@ -27,6 +30,7 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
   if (city == "Bendigo") {
     region = "./data/greater_bendigo.sqlite"
     outputCrs = 7899
+    fullExtractLocation = "./data/geofabrik_australia-latest.osm.pbf"
     osmGpkg = "./output/bendigo_osm.gpkg"
     unconfiguredSqlite = "./output/bendigo_network_unconfigured.sqlite"
     cropAreaPoly = ""  # must set 'crop2Area=F'
@@ -37,6 +41,7 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
   } else if (city == "Melbourne") {
     region = "./data/greater_melbourne.sqlite"
     outputCrs = 7899
+    fullExtractLocation = "./data/geofabrik_australia-latest.osm.pbf"
     osmGpkg = "./output/melbourne_osm.gpkg"
     unconfiguredSqlite = "./output/melbourne_network_unconfigured.sqlite"
     cropAreaPoly = "city-of-melbourne_victoria"
@@ -53,11 +58,14 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
   # Distance to buffer region when getting osm extract, destinations or gtfs routes
   regionBufferDist=10000
   
-  # DOWNLOAD OSM EXTRACT
-  # A flag for whether to download osm extract for the region (if not, and if
-  # network needs to be processed, then must already have osmGpkg file)
-  downloadOsm=T
-  retainDownload=F  # Whether to retain downloaded file after region extracted
+  # EXTRACT OSM for REGION
+  # A flag for whether to make an OSM extract for the region, either by downloading
+  # an extract in .osm.pbf format and clipping it to the region, or by clipping
+  # an existing extract in .osm.pbf format (if not, and if network needs to be 
+  # processed, then must already have osmGpkg file)
+  extractOsm=T
+  useFullExtractHeld=T  # Whether to use an existing OSM extract, instead of downloading
+  retainDownload=T  # Whether to retain downloaded file after region extracted
   
   # NETWORK FROM OSM 
   # A flag for whether to build unconfigured network from osm extract (if not,
@@ -81,22 +89,22 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
 
   # ELEVATION
   # A flag for whether to add elevation or not
-  addElevation=T
+  addElevation=F
   ElevationMultiplier=1
   
   # DESTINATIONS
   # A flag for whether to add a destinations layer (drawn from OSM, and GTFS for PT) or not
-  addDestinationLayer=T
+  addDestinationLayer=F
 
   # NDVI
   # A flag for whether to add NDVI or not
-  addNDVI=T
+  addNDVI=F
   # Buffer distance for finding average NDVI for links
   ndviBuffDist=30
 
   # GTFS
   # A flag for whether to add a network based on GTFS or not
-  addGtfs=T
+  addGtfs=F
   # Select an analysis date, eg a midweek day that's not a public or school holiday
   analysis_date=as.Date("2023-11-15","%Y-%m-%d")
   onroadBus=T  # whether to route buses on roads (rather than create separate pseudo links)
@@ -144,7 +152,7 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
   echo("========================================================\n")
   echo("                **Network Generation Setting**          \n")
   echo("--------------------------------------------------------\n")
-  echo(paste0("- Downloading OSM extract:                        ", downloadOsm,"\n"))
+  echo(paste0("- Getting  OSM extract:                           ", extractOsm,"\n"))
   echo(paste0("- Processing the OSM extract:                     ", networkFromOsm,"\n"))
   echo(paste0("- Cropping to a test area:                        ", crop2Area,"\n"))
   echo(paste0("- Shortest link length in network simplification: ", shortLinkLength,"\n"))
@@ -159,10 +167,11 @@ makeNetwork<-function(city, outputSubdirectory = "generated_network"){
   echo("                **Launching Network Generation**        \n")
   echo("--------------------------------------------------------\n")
   
-  # Downloading OSM
-  if (downloadOsm) {
-    echo(paste0("Downloading OSM extract for ", city, "\n"))
-    getOsmExtract(region, outputCrs, regionBufferDist, osmGpkg, retainDownload)
+  # Extracting OSM
+  if (extractOsm) {
+    echo(paste0("Extracting OSM for ", city, "\n"))
+    getOsmExtract(region, outputCrs, regionBufferDist, osmGpkg, retainDownload,
+                  useFullExtractHeld, fullExtractLocation)
   }
   
   # Processing OSM, or loading existing layers if not required
