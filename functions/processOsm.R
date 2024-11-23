@@ -156,47 +156,54 @@ processOsm <- function(osmGpkg, outputCrs) {
     filter(path_id %in% multiple.endpoint.paths$path_id)
   
   
-  # do a second round of splitting: re-split the paths that have adjacent endpoints,
+  # do a second round of splitting, if needed: re-split the paths that have adjacent endpoints,
   # using 0.1 distance this time, but only where adjacent endpoint is an endpoint
   # for a path that has the same bridge_tunnel status as the path to be resplit
-  echo(paste("Re-splitting", nrow(paths.to.resplit), "paths at adjacent endpoints\n"))
+  if (nrow(paths.to.resplit) > 0) {
+    echo(paste("Re-splitting", nrow(paths.to.resplit), "paths at adjacent endpoints\n"))
+    
+    endpoints.for.resplit <- paths.with.nearby.endpoints %>%
+      # just keep paths that need to be resplit, with their bridge_tunnel status
+      filter(path_id %in% paths.to.resplit$path_id) %>%
+      st_drop_geometry() %>%
+      rename(path_bridge_tunnel = bridge_tunnel) %>%
+      # join the endpoint geometries
+      left_join(endpoints, by = "endpoint_id") %>%
+      st_sf()  %>%
+      # join the bridge_tunnel status of each path that intersects the endpoint
+      # (this is the endpoint's bridge_tunnel status, but it could have more than one,
+      # say where a path enters a tunnel)
+      st_join(paths %>% dplyr::select(endpoint_bridge_tunnel = bridge_tunnel), 
+              join = st_intersects) %>%
+      # only keep the endpoints if bridge_tunnel status for the endpoint
+      # matches the bridge_tunnel status of the path to be resplit
+      filter(path_bridge_tunnel == endpoint_bridge_tunnel) %>%
+      distinct()
+    
+    resplit.path.list <- 
+      splitPathsAtPoints(paths.to.resplit, endpoints.for.resplit, 0.1, "path_id")
+    
+    # convert to dataframe, snap to grid, remove empty geometries
+    echo("Combining the resplit paths into a single dataframe\n")
+    system.time(
+      resplit.paths <- bind_rows(resplit.path.list) %>% 
+        st_snap_to_grid(1) %>%
+        filter(!st_is_empty(geom))
+    )
+    
+    # remove paths that needed to be resplit, and replace with resplit paths
+    combined.paths <- split.paths %>%
+      filter(!path_id %in% paths.to.resplit$path_id) %>%
+      rbind(resplit.paths) %>%
+      # add a new id field, for joining to from and to id's
+      mutate(combined_path_id = row_number())
+    
+  } else {
+    combined.paths <- split.paths %>%
+      # add a new id field, for joining to from and to id's
+      mutate(combined_path_id = row_number())
+  }
   
-  endpoints.for.resplit <- paths.with.nearby.endpoints %>%
-    # just keep paths that need to be resplit, with their bridge_tunnel status
-    filter(path_id %in% paths.to.resplit$path_id) %>%
-    st_drop_geometry() %>%
-    rename(path_bridge_tunnel = bridge_tunnel) %>%
-    # join the endpoint geometries
-    left_join(endpoints, by = "endpoint_id") %>%
-    st_sf()  %>%
-    # join the bridge_tunnel status of each path that intersects the endpoint
-    # (this is the endpoint's bridge_tunnel status, but it could have more than one,
-    # say where a path enters a tunnel)
-    st_join(paths %>% dplyr::select(endpoint_bridge_tunnel = bridge_tunnel), 
-            join = st_intersects) %>%
-    # only keep the endpoints if bridge_tunnel status for the endpoint
-    # matches the bridge_tunnel status of the path to be resplit
-    filter(path_bridge_tunnel == endpoint_bridge_tunnel) %>%
-    distinct()
-  
-  resplit.path.list <- 
-    splitPathsAtPoints(paths.to.resplit, endpoints.for.resplit, 0.1, "path_id")
-  
-  # convert to dataframe, snap to grid, remove empty geometries
-  echo("Combining the resplit paths into a single dataframe\n")
-  system.time(
-    resplit.paths <- bind_rows(resplit.path.list) %>% 
-      st_snap_to_grid(1) %>%
-      filter(!st_is_empty(geom))
-  )
-  
-  # remove paths that needed to be resplit, and replace with resplit paths
-  combined.paths <- split.paths %>%
-    filter(!path_id %in% paths.to.resplit$path_id) %>%
-    rbind(resplit.paths) %>%
-    # add a new id field, for joining to from and to id's
-    mutate(combined_path_id = row_number())
-
   # temp dev notes (SP): 
   # (1) compared to network.sql, the second round only resplits at adjacent 
   #     endpoints if those adjacent endpoints are on paths with the same 
